@@ -24,7 +24,8 @@ Hosting is GitHub Pages, built by GitHub Actions (`.github/workflows/deploy.yml`
 **Every `git push` to `main` rebuilds and redeploys the site** (takes about a minute).
 Progress and errors: the repo's **Actions** tab on github.com.
 
-Live URL: `https://<github-username>.github.io/<repo-name>/`
+Live URL: **https://elipkm.github.io/irish-horse-ride/**
+Repo: https://github.com/Elipkm/irish-horse-ride
 
 One-time setup (already done if the site is live):
 1. Create an empty **public** repo on github.com (free plans only serve Pages from public repos).
