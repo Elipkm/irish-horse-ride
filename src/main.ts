@@ -160,5 +160,10 @@ start().catch((err) => {
 });
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  // A new deploy installs a new service worker in the background. When it takes over a page that
+  // was already controlled by the old one, reload once so the new build shows on this launch.
+  if (navigator.serviceWorker.controller) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true });
+  }
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

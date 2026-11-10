@@ -28,8 +28,10 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
 
   // Page loads: network first, so a fresh deploy shows up on the next launch; cached page when offline.
+  // cache: 'no-cache' makes the browser revalidate with the server; without it the host's
+  // 10-minute HTTP cache can hand back the previous build.
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).catch(() => caches.match('./index.html').then((hit) => hit || Response.error())));
+    e.respondWith(fetch(req.url, { cache: 'no-cache' }).catch(() => caches.match('./index.html').then((hit) => hit || Response.error())));
     return;
   }
 
