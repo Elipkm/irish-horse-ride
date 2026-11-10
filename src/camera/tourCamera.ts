@@ -72,7 +72,8 @@ export class TourCamera {
   }
 
   update(dt: number) {
-    this.u = (this.u + (this.pace.speed * dt) / this.length) % 1;
+    // Keep u in [0, 1): the curve lookup returns nothing outside that range.
+    this.u = (((this.u + (this.pace.speed * Math.max(0, dt)) / this.length) % 1) + 1) % 1;
     const { trail, heightAt } = this.field;
 
     trail.getPointAt(this.u, this.pos);

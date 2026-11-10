@@ -124,8 +124,9 @@ async function start() {
   let slowest = 0;
   let firstFrame = true;
   renderer.setAnimationLoop((now: number) => {
-    const dt = Math.min(0.1, (now - last) / 1000); // clamp: a hidden tab must not cause a jump
-    const frameMs = now - last;
+    // The first callback's timestamp can predate `last`, and a hidden tab produces huge gaps: clamp both ways.
+    const frameMs = Math.max(0, now - last);
+    const dt = Math.min(0.1, frameMs / 1000);
     last = now;
 
     tour.update(dt);
