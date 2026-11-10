@@ -48,5 +48,8 @@ export default defineConfig({
   // Three.js alone is ~550 kB minified (~150 kB gzip); raise the warning limit accordingly.
   build: { target: 'es2022', sourcemap: false, chunkSizeWarningLimit: 900 },
   server: { host: true },
+  // Loaders under three/addons import from 'three'; point that at the WebGPU build so only one
+  // copy of the engine is bundled and classes match.
+  resolve: { alias: [{ find: /^three$/, replacement: 'three/webgpu' }] },
   plugins: [serviceWorker()],
 });

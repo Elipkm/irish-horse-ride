@@ -3,6 +3,20 @@
 Personal single-player horse riding game for iPad, delivered as an installable web app (PWA).
 Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic WebGL2 fallback.
 
+## Status
+- **M1 Skeleton** – done: renderer, PWA, deploy.
+- **M2 Terrain & light** – done: one 2 km valley (river bed, lake, trail, enclosing hills), five blended
+  ground materials, sky-image lighting, valley mist, filmic tone mapping.
+- Next: **M3 Horse**.
+
+## What you can do right now (M2)
+There is no horse yet. A camera rides the trail loop around the valley so the scenery and fps can be judged.
+
+- **Drag** anywhere: look around (the view recentres by itself).
+- **Pace** button (or Space): Canter → Gallop → Stop → Walk → Trot.
+- **View** button (or V): rider's eye level ↔ bird's-eye overview.
+- **Quality** button (or Q): Low / Medium / High. It changes render resolution and terrain detail and is remembered.
+
 ## Run locally
 ```
 npm install
@@ -17,6 +31,13 @@ Home-screen install and offline mode need HTTPS, so use the deployed site for th
 npm run build      # type-checks, then outputs dist/ (including a generated dist/sw.js)
 npm run preview    # serves dist/ on http://localhost:4173
 ```
+
+## Assets
+```
+npm run assets     # downloads raw CC0 files into assets-source/ and writes optimised copies to public/
+```
+Only needed when adding or changing assets: the optimised files in `public/` are committed, the raw
+downloads in `assets-source/` are not. Every asset is listed with source and licence in `ASSETS.md`.
 
 ## Deploy (GitHub Pages)
 Hosting is GitHub Pages, built by GitHub Actions (`.github/workflows/deploy.yml`).
@@ -44,9 +65,11 @@ so the newest deploy appears on that launch. The overlay shows `build <date time
 confirm which build is running.
 
 ## On-screen overlay
-`60 fps | WebGPU | draw calls 3 | tris 15 | geo 3 tex 2 | build 2026-11-10 18:47Z`
+`60 fps (worst 17 ms) | WebGPU | calls 5 | tris 61k | geo 16 tex 22 | build 2026-11-10 19:38Z`
 
+- `fps`: average over the last half second; `worst`: the longest single frame in that time (stutter shows here first).
 - `WebGPU` / `WebGL2`: the render backend actually in use on this device.
+- `calls` / `tris`: draw calls and triangles per frame. Plan budget: under 150 calls and 200k triangles.
 - `geo` / `tex`: geometries and textures currently held on the GPU.
 - `heap … MB` appears only in Chromium browsers; Safari does not expose JS memory.
 - Add `?webgl` to the URL to force the WebGL2 path, to compare fps between the two backends.

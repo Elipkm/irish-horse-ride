@@ -95,6 +95,6 @@ Build **one small, highly polished valley (about 1–2 km across)** first: valle
 - Prefer robust and measurable over clever; add fallbacks for every advanced effect.
 
 ## 12. Open Questions for the Owner
-- Which iPad model (chip) and iPadOS version? (Sets the quality ceiling.)
+- ~~Which iPad model (chip) and iPadOS version?~~ **Answered 2026-11-10:** iPad 10th generation, iPadOS 26.5; Safari runs the WebGPU backend.
 - Budget for paid assets (horse model, scenery packs)?
-- Preferred time of day / weather as the default mood?
+- ~~Preferred time of day / weather as the default mood?~~ **Answered 2026-11-10:** misty sun glow (low sun through mist and thin cloud).
