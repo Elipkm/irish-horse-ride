@@ -65,8 +65,11 @@ export interface Heightfield {
   nodeMin: Float32Array[];
   nodeMax: Float32Array[];
   heightTexture: THREE.DataTexture;
-  /** RG = world normal x,z · B = baked ambient occlusion. */
+  /** RG = world normal x,z · B = baked ambient occlusion · A = 1 − tree shade (written by the forest). */
   normalAoTexture: THREE.DataTexture;
+  /** The bytes behind normalAoTexture and controlTexture (4 per grid point), for placing things on the CPU. */
+  normalAo: Uint8Array;
+  control: Uint8Array;
   /** R = trail distance field · G = mud/wet · B = moss/heath · A = large-scale colour variation. */
   controlTexture: THREE.DataTexture;
   /** Closed riding trail on the terrain surface. */
@@ -352,6 +355,8 @@ export async function generateHeightfield(onProgress: (fraction: number) => void
     heightTexture,
     normalAoTexture: dataTexture(normalAo),
     controlTexture: dataTexture(control),
+    normalAo,
+    control,
     trail,
     sites,
     lakeCentre: new THREE.Vector3(lakeX, WATER_LEVEL, LAKE.z),

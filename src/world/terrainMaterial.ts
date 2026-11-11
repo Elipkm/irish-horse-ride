@@ -43,7 +43,10 @@ export interface TerrainMaterial {
 }
 
 /** World x,z -> texture coordinate of the heightfield-sized maps (texel centres on grid points). */
-const mapUv = (xz: ReturnType<typeof vec2>) => xz.add(HALF + CELL / 2).div(WORLD_SIZE + CELL);
+export const mapUv = (xz: ReturnType<typeof vec2>) => xz.add(HALF + CELL / 2).div(WORLD_SIZE + CELL);
+
+/** Tint that turns the grass scan into Irish pasture green; `macro` (control map alpha) varies it from field to field. */
+export const grassShade = (macro: ReturnType<typeof float>) => mix(vec3(0.55, 1.0, 0.42), vec3(0.9, 1.06, 0.46), macro).mul(1.25);
 
 export function createTerrainMaterial(field: Heightfield, ground: GroundTextures): TerrainMaterial {
   const cameraXZ = uniform(new THREE.Vector2());
@@ -104,14 +107,16 @@ export function createTerrainMaterial(field: Heightfield, ground: GroundTextures
   // large-scale channel shifts the green from field to field.
   const grassFar = texture(ground.grass.col, wp.xz.div(29)).rgb;
   const macro = control.a;
-  const grassTint = mix(vec3(0.55, 1.0, 0.42), vec3(0.9, 1.06, 0.46), macro);
-  const grassShade = grassTint.mul(1.25);
+  const grassTone = grassShade(macro);
   const mossTint = mix(vec3(0.95, 0.9, 0.7), vec3(0.8, 1.0, 0.6), macro);
   const mudTint = vec3(1.55, 1.38, 1.15); // source scan is near-black; lift to wet peat brown
-  const grassCol = mix(grass.col, grassFar, smoothstep(14, 60, viewDist)).mul(grassShade);
+  const grassCol = mix(grass.col, grassFar, smoothstep(14, 60, viewDist)).mul(grassTone);
+
+  // Under trees (baked by the forest): darker ground, moss and leaf litter instead of pasture.
+  const treeShade = float(1).sub(normalAo.a);
 
   // Blend weights.
-  const wMoss = smoothstep(0.3, 0.78, control.b.add(breakup.mul(0.2)));
+  const wMoss = smoothstep(0.3, 0.78, control.b.add(treeShade.mul(0.5)).add(breakup.mul(0.2)));
   const pathField = control.r.add(breakup.mul(0.035));
   const wPath = smoothstep(0.74, 0.82, pathField); // ≈ 3 m wide
   const wVerge = smoothstep(0.58, 0.74, pathField).mul(0.55); // worn, muddy edge
@@ -126,8 +131,8 @@ export function createTerrainMaterial(field: Heightfield, ground: GroundTextures
   const nearAlbedo = layered(grassCol, moss.col, mud.col, gravel.col, mix(rockZ.col, rockX.col, facingX));
   // Far away each texture repeats every few pixels and reads as a regular grain. Fade to the same
   // blend built from each layer's average colour instead.
-  const farAlbedo = layered(mean('grass').mul(grassShade), mean('moss'), mean('mud'), mean('gravel'), mean('rock'));
-  const albedo = mix(nearAlbedo, farAlbedo, smoothstep(90, 380, viewDist).mul(0.9)).mul(mix(1, 0.82, wet));
+  const farAlbedo = layered(mean('grass').mul(grassTone), mean('moss'), mean('mud'), mean('gravel'), mean('rock'));
+  const albedo = mix(nearAlbedo, farAlbedo, smoothstep(90, 380, viewDist).mul(0.9)).mul(mix(1, 0.82, wet)).mul(mix(1, 0.6, treeShade));
 
   const rockRough = mix(rockZ.nr.b, rockX.nr.b, facingX);
   const roughness = mix(
@@ -151,7 +156,7 @@ export function createTerrainMaterial(field: Heightfield, ground: GroundTextures
   material.colorNode = albedo;
   material.roughnessNode = roughness;
   material.metalness = 0;
-  material.aoNode = normalAo.b;
+  material.aoNode = normalAo.b.mul(mix(1, 0.8, treeShade));
   material.normalNode = cameraViewMatrix.transformDirection(worldNormal);
 
   return { material, cameraXZ: cameraXZ.value, lodRange };

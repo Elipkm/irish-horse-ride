@@ -10,7 +10,8 @@ import sharp from 'sharp';
 const RAW = 'assets-source/polyhaven';
 const TEX_OUT = 'public/textures';
 const ENV_OUT = 'public/env';
-const SIZE = 1024; // plan §3: 1K textures by default
+const GROUND_SIZE = 1024; // plan §3: 1K textures by default
+const BARK_SIZE = 512; // trunks are narrow on screen
 
 /** Ground layers: game name -> Poly Haven asset id. */
 const LAYERS = {
@@ -19,6 +20,11 @@ const LAYERS = {
   mud: 'brown_mud_02',
   gravel: 'gravel_ground_01',
   rock: 'mossy_rock',
+};
+/** Tree bark: game name -> Poly Haven asset id. */
+const BARK = {
+  bark_oak: 'bark_brown_02',
+  bark_pine: 'pine_bark',
 };
 const HDRI = 'kloofendal_28d_misty_puresky';
 
@@ -35,7 +41,7 @@ async function download(url, file) {
 
 const kb = async (file) => `${Math.round((await stat(file)).size / 1024)} kB`;
 
-async function buildLayer(name, id) {
+async function buildLayer(name, id, SIZE, colourOnly = false) {
   const raw = (map) => `${RAW}/${id}_${map}_1k.jpg`;
   for (const map of ['diff', 'nor_gl', 'arm']) await download(texUrl(id, map), raw(map));
 
@@ -55,6 +61,11 @@ async function buildLayer(name, id) {
   const colFile = `${TEX_OUT}/${name}_col.webp`;
   await sharp(col, { raw: { width: SIZE, height: SIZE, channels: 3 } }).webp({ quality: 82 }).toFile(colFile);
 
+  if (colourOnly) {
+    console.log(`${name.padEnd(9)} ${id.padEnd(20)} col ${await kb(colFile)}`);
+    return;
+  }
+
   // <name>_nr: R,G = tangent-space normal x,y (OpenGL convention), B = roughness.
   // JPEG with 4:4:4 chroma so the three data channels do not bleed into each other.
   const nr = Buffer.alloc(px * 3);
@@ -68,14 +79,15 @@ async function buildLayer(name, id) {
     .jpeg({ quality: 88, chromaSubsampling: '4:4:4', mozjpeg: true })
     .toFile(nrFile);
 
-  console.log(`${name.padEnd(7)} ${id.padEnd(20)} col ${await kb(colFile)}, nr ${await kb(nrFile)}`);
+  console.log(`${name.padEnd(9)} ${id.padEnd(20)} col ${await kb(colFile)}, nr ${await kb(nrFile)}`);
 }
 
 await mkdir(RAW, { recursive: true });
 await mkdir(TEX_OUT, { recursive: true });
 await mkdir(ENV_OUT, { recursive: true });
 
-for (const [name, id] of Object.entries(LAYERS)) await buildLayer(name, id);
+for (const [name, id] of Object.entries(LAYERS)) await buildLayer(name, id, GROUND_SIZE);
+for (const [name, id] of Object.entries(BARK)) await buildLayer(name, id, BARK_SIZE, true);
 
 const hdrRaw = `${RAW}/${HDRI}_1k.hdr`;
 await download(hdriUrl(HDRI), hdrRaw);

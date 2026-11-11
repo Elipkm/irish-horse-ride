@@ -8,6 +8,13 @@ const GRAVITY = 9.81;
 const JUMP_SPEED = 4.6; // about 1.1 m high, 0.9 s in the air
 const MAX_WADE_DEPTH = 1.0; // deeper water than this stops the horse
 const EDGE_MARGIN = 40; // keep this far inside the edge of the map
+const BODY_RADIUS = 0.45; // room the horse needs beside a tree trunk
+
+/** Solid things the horse must go round (tree trunks; walls later). */
+export interface Obstacles {
+  /** Moves `p` out of any obstacle that a circle of `radius` around it overlaps; true if it moved. */
+  pushOut(p: { x: number; z: number }, radius: number): boolean;
+}
 
 const smoothstep = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -37,6 +44,7 @@ export class HorseController {
   steerInput = 0;
   /** When on, the horse follows the trail by itself. */
   autopilot = false;
+  obstacles: Obstacles | null = null;
 
   speed = 0;
   steer = 0;
@@ -123,6 +131,8 @@ export class HorseController {
 
     c.x += fx * this.speed * dt;
     c.z += fz * this.speed * dt;
+    // Brushing a trunk: slide round it, and no faster than a walk.
+    if (this.obstacles?.pushOut(c, BODY_RADIUS)) this.speed = Math.min(this.speed, GAITS[1].speed);
     hFore = heightAt(c.x + fx * HALF_BODY, c.z + fz * HALF_BODY);
     hHind = heightAt(c.x - fx * HALF_BODY, c.z - fz * HALF_BODY);
     const ground = (hFore + hHind) / 2;

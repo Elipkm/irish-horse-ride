@@ -9,13 +9,16 @@ import { GltfHorse } from './player/gltfHorse';
 import { HorseController } from './player/horseController';
 import { ProceduralHorse } from './player/proceduralHorse';
 import { hud } from './ui/hud';
+import { Forest } from './world/forest';
+import { Grass } from './world/grass';
+import { windTime } from './world/wind';
 import { createLakePlaceholder, createMountains } from './world/backdrop';
 import { loadEnvironment } from './world/environment';
 import { generateHeightfield } from './world/heightfield';
 import { Terrain } from './world/terrain';
 import { GROUND_LAYERS, type GroundTextures } from './world/terrainMaterial';
 
-// M4: ride a horse through the valley with two thumbs (or the keyboard on desktop).
+// M5: ride a horse through the valley, its woods and its windblown grass.
 
 const STEP = 1 / 60; // fixed time step of the riding simulation
 
@@ -76,13 +79,20 @@ async function start() {
   // Load files and build the valley side by side; the bar tracks both.
   let filesDone = 0;
   let terrainDone = 0;
-  const FILES = GROUND_LAYERS.length * 2 + 2;
+  const FILES = GROUND_LAYERS.length * 2 + 4;
   const progress = () => hud.setLoading('Loading valley…', 0.05 + 0.45 * (filesDone / FILES) + 0.5 * terrainDone);
   const fileLoaded = () => {
     filesDone++;
     progress();
   };
-  const [ground, environment, field, horseModel] = await Promise.all([
+  const loadBark = async (file: string) => {
+    const t = await new THREE.TextureLoader().loadAsync(`./textures/${file}`);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    fileLoaded();
+    return t;
+  };
+  const [ground, environment, field, horseModel, barkOak, barkPine] = await Promise.all([
     loadGroundTextures(Math.min(4, renderer.getMaxAnisotropy()), fileLoaded),
     loadEnvironment(scene, './env/sky.hdr').then((e) => (fileLoaded(), e)),
     generateHeightfield((f) => {
@@ -93,13 +103,24 @@ async function start() {
     GltfHorse.load('./models/horse.glb')
       .catch((err) => (console.warn('horse.glb failed to load, using the stand-in horse', err), new ProceduralHorse()))
       .then((h) => (fileLoaded(), h)),
+    loadBark('bark_oak_col.webp'),
+    loadBark('bark_pine_col.webp'),
   ]);
+
+  // The forest goes first: it writes the shade under the trees into a terrain map.
+  const forest = new Forest(renderer, field, { oak: barkOak, pine: barkPine }, environment.sunDirection);
+  forest.setNearRange(QUALITY_LEVELS[qualityIndex].treeRange);
+  scene.add(forest.group);
 
   const terrain = new Terrain(field, ground);
   terrain.setLodRange(QUALITY_LEVELS[qualityIndex].terrainRange);
   scene.add(terrain.mesh, createMountains(), createLakePlaceholder(field));
 
+  const grass = new Grass(field, ground.grass.mean, QUALITY_LEVELS[qualityIndex].grassTufts);
+  scene.add(grass.mesh);
+
   const horse = new HorseController(field);
+  horse.obstacles = forest;
   scene.add(horseModel.root, horseModel.shadow.mesh);
   const follow = new FollowCamera(camera, field);
 
@@ -125,6 +146,8 @@ async function start() {
     saveQualityIndex(qualityIndex);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY_LEVELS[qualityIndex].pixelRatio));
     terrain.setLodRange(QUALITY_LEVELS[qualityIndex].terrainRange);
+    grass.setDensity(QUALITY_LEVELS[qualityIndex].grassTufts);
+    forest.setNearRange(QUALITY_LEVELS[qualityIndex].treeRange);
   });
 
   const keys = new Keyboard();
@@ -152,7 +175,7 @@ async function start() {
   };
 
   // Debug handle for development and automated checks; not used by the game itself.
-  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch } });
+  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest } });
 
   let last = performance.now();
   let simTime = 0;
@@ -184,7 +207,10 @@ async function start() {
     horseModel.update(dt, horse);
     follow.update(dt, horseModel.root.position, horse.renderHeading, horse.speed / TOP_SPEED);
 
+    windTime.value += dt;
     terrain.update(camera);
+    grass.update(camera);
+    forest.update(camera);
     renderer.render(scene, camera);
 
     if (firstFrame) {

@@ -9,7 +9,8 @@ const damp = (from: number, to: number, rate: number, dt: number) => to + (from 
  * at speed, and keeps a clear line to the horse over the terrain: when a slope would get in the way
  * it first rises, and only moves closer if rising is not enough. Looking around (`look`) is added
  * on top and drifts back behind the horse once the finger is lifted.
- * Trees and walls are not obstacles yet; they join the same check when they exist (M5, M7).
+ * Trees do not block it: leaves close to the lens dissolve instead (world/forest.ts), and trunks are
+ * thin enough to look past. Walls join the terrain check when they exist (M7).
  */
 export class FollowCamera {
   /** Far = high overview of the horse in the valley. */

@@ -3,7 +3,7 @@ import { float, length, smoothstep, uniform, uv } from 'three/tsl';
 
 const saturate = (x: number) => Math.min(1, Math.max(0, x));
 
-/** Soft dark patch on the ground under the horse: cheap grounding until real shadows arrive with the forest milestone. */
+/** Soft dark patch on the ground under the horse: cheap grounding; there are no real-time shadows (trees shade the ground with a baked map, see world/forest.ts). */
 export class BlobShadow {
   readonly mesh: THREE.Mesh;
   private readonly strength = uniform(0.6);

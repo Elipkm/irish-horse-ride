@@ -1,9 +1,14 @@
 // Manual quality levels (plan §3). Automatic scaling on fps drops comes with the M9 quality manager.
+//
+// pixelRatio:   render resolution relative to CSS pixels (capped by the device's own ratio).
+// terrainRange: radius in metres of full terrain detail around the camera.
+// grassTufts:   grass tufts in each of the three grass rings (5 triangles per tuft).
+// treeRange:    trees nearer than this many metres are full models; beyond it, flat pictures (impostors).
 
 export const QUALITY_LEVELS = [
-  { name: 'Low', pixelRatio: 1, terrainRange: 80 },
-  { name: 'Medium', pixelRatio: 1.5, terrainRange: 100 },
-  { name: 'High', pixelRatio: 2, terrainRange: 130 },
+  { name: 'Low', pixelRatio: 1, terrainRange: 80, grassTufts: 2000, treeRange: 28 },
+  { name: 'Medium', pixelRatio: 1.5, terrainRange: 100, grassTufts: 3600, treeRange: 38 },
+  { name: 'High', pixelRatio: 2, terrainRange: 130, grassTufts: 4200, treeRange: 45 },
 ] as const;
 export type Quality = (typeof QUALITY_LEVELS)[number];
 

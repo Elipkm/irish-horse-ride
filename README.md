@@ -11,10 +11,15 @@ Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic We
   to its speed, steering, jumping, terrain-following, keyboard controls, follow camera.
 - **M4 Touch controls & camera** – done: left-thumb joystick, pace and jump buttons, drag to look around,
   camera that rises over slopes instead of clipping into them.
-- Next: **M5 Forest & grass**.
+- **M5 Forest & grass** – done: about 13,000 oak, birch and Scots pine plus gorse bushes, full models near
+  the camera and flat stand-in pictures (impostors) further away, grass that follows the camera, wind in
+  grass and trees, shade on the ground under the trees, tree trunks the horse has to go round.
+- Next: **M6 Water, sky, weather, god rays, particles**.
 
-## What you can do right now (M4)
-Ride the horse around the valley. It starts standing on the trail.
+## What you can do right now (M5)
+Ride the horse around the valley. It starts standing on the trail. Woods cover the lower valley sides
+and the trail passes through a few of them; the horse slows to a walk and slides round a trunk if you
+ride into one. Bushes and grass can be ridden through.
 
 On the iPad (two thumbs):
 
@@ -35,7 +40,7 @@ Keyboard (desktop):
 | **T** | Auto-ride along the trail on/off |
 | **R** | Put the horse back on the trail (if it gets stuck) |
 | **V** | Camera near / far |
-| **Q** | Quality Low / Medium / High (render resolution and terrain detail; remembered) |
+| **Q** | Quality Low / Medium / High (render resolution, terrain detail, grass density, distance at which trees become full models; remembered) |
 | Mouse drag | Look around |
 
 The horse slows on steep climbs and refuses slopes steeper than about 40°, slows in shallow water,
@@ -95,12 +100,14 @@ so the newest deploy appears on that launch. The overlay shows `build <date time
 confirm which build is running.
 
 ## On-screen overlay
-`60 fps (worst 17 ms) | 3.0 m/s | WebGPU | calls 10 | tris 86k | geo 21 tex 23 | build 2026-11-11 05:38Z`
+`60 fps (worst 17 ms) | 3.0 m/s | WebGPU | calls 18 | tris 178k | geo 36 tex 33 | build 2026-11-11 21:45Z`
 
 - `fps`: average over the last half second; `worst`: the longest single frame in that time (stutter shows here first).
 - `m/s`: the horse's current speed (walk 1.4, trot 3.0, canter 5.0, gallop 11).
 - `WebGPU` / `WebGL2`: the render backend actually in use on this device.
 - `calls` / `tris`: draw calls and triangles per frame. Plan budget: under 150 calls and 200k triangles.
+  The triangle figure counts everything sent to the GPU, including the grass behind the camera and one
+  rectangle for every distant tree in the valley whether or not it is in view, so it overstates what is on screen.
 - `geo` / `tex`: geometries and textures currently held on the GPU.
 - `heap … MB` appears only in Chromium browsers; Safari does not expose JS memory.
 - Add `?webgl` to the URL to force the WebGL2 path, to compare fps between the two backends.

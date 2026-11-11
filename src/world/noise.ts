@@ -2,7 +2,8 @@
 
 export type Noise2D = (x: number, y: number) => number;
 
-function mulberry32(seed: number): () => number {
+/** Small seeded random number generator: returns values in [0, 1). */
+export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;

@@ -19,6 +19,16 @@ All from Poly Haven, 1K JPG downloads of the `diff`, `nor_gl` and `arm` maps. Ea
 | `public/textures/gravel_col.webp`, `gravel_nr.jpg` | https://polyhaven.com/a/gravel_ground_01 | Rob Tuytel | CC0 | The riding trail. |
 | `public/textures/rock_col.webp`, `rock_nr.jpg` | https://polyhaven.com/a/mossy_rock | Rob Tuytel | CC0 | Steep slopes and outcrops. |
 
+## Tree bark
+
+Poly Haven, 1K JPG downloads of the `diff` and `arm` maps, reduced to 512 px colour-only files
+(ambient occlusion baked in, as for the ground textures).
+
+| File | Source | Author | License | Notes |
+|------|--------|--------|---------|-------|
+| `public/textures/bark_oak_col.webp` | https://polyhaven.com/a/bark_brown_02 | Rob Tuytel | CC0 | Oak trunks and branches. Also the birch: turned into pale bark with dark cracks in the shader. |
+| `public/textures/bark_pine_col.webp` | https://polyhaven.com/a/pine_bark | Dimitrios Savva | CC0 | Scots pine trunks, tinted redder in the shader. |
+
 ## Sky / lighting
 
 | File | Source | Author | License | Notes |
@@ -58,6 +68,12 @@ put it in `assets-source/horse/` to re-run the export. The stand-in horse built 
 The valley itself (heights, river and lake basins, trail, baked shading and ground-cover maps) and the
 distant mountains are generated in code from a fixed seed: `src/world/heightfield.ts`, `src/world/backdrop.ts`.
 The stand-in horse and its ground shadow are also built in code: `src/player/proceduralHorse.ts`.
+
+The forest uses no model or leaf image files. Tree and bush shapes are grown in code
+(`src/world/treeModels.ts`), their leaf and needle pictures are painted in code (`src/world/foliageTextures.ts`),
+their positions are chosen in code (`src/world/forestPlacement.ts`), and the pictures used for distant trees
+are rendered from those models when the game starts (`src/world/forest.ts`). The grass is geometry built in
+`src/world/grass.ts`.
 
 ## Dev tools
 
