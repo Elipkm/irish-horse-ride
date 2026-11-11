@@ -32,11 +32,11 @@ interface Pose {
  */
 export class HorseController {
   /** Index into GAITS the rider has asked for. */
-  gaitIndex = 1;
+  gaitIndex = 0;
   /** Steering from the player, -1 (right) .. 1 (left). Ignored while the autopilot rides. */
   steerInput = 0;
-  /** When on, the horse follows the trail by itself (useful on the iPad until touch controls exist). */
-  autopilot = true;
+  /** When on, the horse follows the trail by itself. */
+  autopilot = false;
 
   speed = 0;
   steer = 0;

@@ -9,27 +9,34 @@ Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic We
   ground materials, sky-image lighting, valley mist, filmic tone mapping.
 - **M3 Horse** – done: realistic rigged horse (CC0) with walk, trot, canter and gallop animations matched
   to its speed, steering, jumping, terrain-following, keyboard controls, follow camera.
-- Next: **M4 Touch controls & camera**.
+- **M4 Touch controls & camera** – done: left-thumb joystick, pace and jump buttons, drag to look around,
+  camera that rises over slopes instead of clipping into them.
+- Next: **M5 Forest & grass**.
 
-## What you can do right now (M3)
-Ride the horse around the valley. It starts at a walk, steering itself along the trail.
+## What you can do right now (M4)
+Ride the horse around the valley. It starts standing on the trail.
+
+On the iPad (two thumbs):
+
+- **Left thumb**: touch anywhere on the left side and a joystick appears under your thumb. Push left or right to steer.
+- **Right thumb**: **Stop / Walk / Trot / Canter / Gallop** set the pace (the current one is highlighted); **Jump** works from a trot or faster.
+- **Drag** anywhere else to look around. The camera drifts back behind the horse about a second after you let go.
+- Top right: **Auto-ride** (the horse follows the trail by itself; steering switches it off), **View** (near / far), **Quality**.
 
 Keyboard (desktop):
 
 | Key | Action |
 |-----|--------|
-| **W** / **↑** | Faster gait: Halt → Walk → Trot → Canter → Gallop |
-| **S** / **↓** | Slower gait |
-| **X**, **1**, **2**, **3**, **4** | Halt, Walk, Trot, Canter, Gallop directly |
-| **A** **D** / **←** **→** | Steer (this also switches automatic steering off) |
+| **W** / **↑** | Faster pace: Stop → Walk → Trot → Canter → Gallop |
+| **S** / **↓** | Slower pace |
+| **X**, **1**, **2**, **3**, **4** | Stop, Walk, Trot, Canter, Gallop directly |
+| **A** **D** / **←** **→** | Steer |
 | **Space** | Jump (from a trot or faster) |
-| **T** | Automatic steering along the trail on/off |
+| **T** | Auto-ride along the trail on/off |
 | **R** | Put the horse back on the trail (if it gets stuck) |
 | **V** | Camera near / far |
 | **Q** | Quality Low / Medium / High (render resolution and terrain detail; remembered) |
-
-On the iPad (no touch steering until M4): leave **Steering: Auto** on and use the **Gait**, **Jump**,
-**View** and **Quality** buttons. **Drag** anywhere to look around; the camera drifts back behind the horse.
+| Mouse drag | Look around |
 
 The horse slows on steep climbs and refuses slopes steeper than about 40°, slows in shallow water,
 and stops before water deeper than 1 m and before the edge of the map.

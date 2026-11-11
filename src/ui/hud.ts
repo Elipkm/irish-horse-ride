@@ -1,4 +1,4 @@
-/** HTML overlay: stats line, loading screen and the on-screen buttons. */
+/** HTML overlay: stats line, loading screen and the settings buttons. (Riding controls: input/touchControls.ts.) */
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -15,6 +15,7 @@ export const hud = {
   hideLoading() {
     el('loading').remove();
     el('controls').hidden = false;
+    el('ride').hidden = false;
   },
 
   showError(message: string) {

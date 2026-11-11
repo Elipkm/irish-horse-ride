@@ -18,20 +18,43 @@
       #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #1f3a2a; color: #e8efe6; font: 16px/1.4 system-ui, sans-serif; }
       #loading-track { width: min(60vw, 320px); height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
       #loading-bar { width: 0; height: 100%; background: #cfe3b4; transition: width .15s linear; }
-      #controls { position: fixed; left: calc(env(safe-area-inset-left) + 12px); bottom: calc(env(safe-area-inset-bottom) + 12px); display: flex; gap: 8px; }
-      #controls[hidden] { display: none; }
-      #controls button { min-width: 44px; min-height: 44px; padding: 0 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 22px; background: rgba(0,0,0,.4); color: #fff; font: 14px system-ui, sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-      #controls button:active { background: rgba(255,255,255,.25); }
+      button { border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.4); color: #fff; font: 14px system-ui, sans-serif; touch-action: none; -webkit-tap-highlight-color: transparent; }
+      button:active { background: rgba(255,255,255,.25); }
+      /* Settings: small, top right, out of the thumbs' way. */
+      #controls { position: fixed; right: calc(env(safe-area-inset-right) + 10px); top: calc(env(safe-area-inset-top) + 8px); display: flex; gap: 6px; }
+      #controls[hidden], #ride[hidden] { display: none; }
+      #controls button { min-height: 40px; padding: 0 12px; border-radius: 20px; font-size: 13px; }
+      /* Right thumb: pace buttons and Jump. */
+      #gaits { position: fixed; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 22px); display: flex; flex-direction: column; gap: 8px; }
+      #gaits button { width: 108px; height: 50px; border-radius: 25px; font-size: 16px; }
+      #gaits button.active { background: rgba(207,227,180,.9); border-color: transparent; color: #16261b; font-weight: 600; }
+      #btn-jump { position: fixed; right: calc(env(safe-area-inset-right) + 144px); bottom: calc(env(safe-area-inset-bottom) + 30px); width: 88px; height: 88px; border-radius: 50%; font-size: 17px; }
+      /* Left thumb: joystick. Rests in the corner, jumps to wherever the thumb lands. Touch screens only. */
+      #stick { display: none; position: fixed; left: calc(env(safe-area-inset-left) + 120px); top: calc(100% - env(safe-area-inset-bottom) - 120px); width: 140px; height: 140px; margin: -70px 0 0 -70px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); background: rgba(0,0,0,.15); pointer-events: none; opacity: .6; }
+      #stick.active { opacity: 1; }
+      #knob { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%; background: rgba(255,255,255,.55); }
+      @media (any-pointer: coarse) { #stick { display: block; } }
+      #hint { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 18px); transform: translateX(-50%); padding: 8px 14px; border-radius: 16px; background: rgba(0,0,0,.45); color: #fff; font: 14px system-ui, sans-serif; white-space: nowrap; pointer-events: none; animation: hint 9s forwards; }
+      #hint .touch { display: none; }
+      @media (any-pointer: coarse) { #hint .touch { display: inline; } #hint .keys { display: none; } }
+      @keyframes hint { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
     </style>
   </head>
   <body>
     <div id="hud"></div>
     <div id="controls" hidden>
-      <button id="btn-gait" type="button"></button>
-      <button id="btn-jump" type="button"></button>
       <button id="btn-auto" type="button"></button>
       <button id="btn-view" type="button"></button>
       <button id="btn-quality" type="button"></button>
+    </div>
+    <div id="ride" hidden>
+      <div id="stick"><div id="knob"></div></div>
+      <div id="gaits"></div>
+      <button id="btn-jump" type="button">Jump</button>
+      <div id="hint">
+        <span class="touch">Left thumb steers · buttons set the pace · drag to look around</span>
+        <span class="keys">W / S pace · A / D steer · Space jump · drag to look around</span>
+      </div>
     </div>
     <div id="loading">
       <div id="loading-label">Starting…</div>

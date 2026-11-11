@@ -3,7 +3,8 @@ import { FollowCamera } from './camera/followCamera';
 import { QUALITY_LEVELS, loadQualityIndex, saveQualityIndex } from './engine/quality';
 import { createRenderer } from './engine/renderer';
 import { Keyboard } from './input/keyboard';
-import { GAITS, TOP_SPEED } from './player/gaits';
+import { TouchControls } from './input/touchControls';
+import { TOP_SPEED } from './player/gaits';
 import { GltfHorse } from './player/gltfHorse';
 import { HorseController } from './player/horseController';
 import { ProceduralHorse } from './player/proceduralHorse';
@@ -14,7 +15,7 @@ import { generateHeightfield } from './world/heightfield';
 import { Terrain } from './world/terrain';
 import { GROUND_LAYERS, type GroundTextures } from './world/terrainMaterial';
 
-// M3: ride a horse through the valley (keyboard on desktop; on-screen buttons and autopilot for the iPad).
+// M4: ride a horse through the valley with two thumbs (or the keyboard on desktop).
 
 const STEP = 1 / 60; // fixed time step of the riding simulation
 
@@ -100,11 +101,24 @@ async function start() {
 
   const horse = new HorseController(field);
   scene.add(horseModel.root, horseModel.shadow.mesh);
-  const follow = new FollowCamera(camera, field, renderer.domElement);
+  const follow = new FollowCamera(camera, field);
 
-  const refreshGait = hud.button('btn-gait', () => `Gait: ${horse.gait.name}`, () => horse.setGait((horse.gaitIndex + 1) % GAITS.length));
-  hud.button('btn-jump', () => 'Jump', () => horse.jump());
-  const refreshAuto = hud.button('btn-auto', () => `Steering: ${horse.autopilot ? 'Auto' : 'Manual'}`, () => horse.setAutopilot(!horse.autopilot));
+  const setGait = (index: number) => {
+    horse.setGait(index);
+    touch.showGait(horse.gaitIndex);
+  };
+  const touch = new TouchControls(renderer.domElement, {
+    onGait: setGait,
+    onJump: () => horse.jump(),
+    onLook: (dx, dy) => follow.look(dx, dy),
+    onLookHeld: (held) => (follow.held = held),
+  });
+  touch.showGait(horse.gaitIndex);
+
+  const refreshAuto = hud.button('btn-auto', () => `Auto-ride: ${horse.autopilot ? 'On' : 'Off'}`, () => {
+    horse.setAutopilot(!horse.autopilot);
+    if (horse.autopilot && horse.gaitIndex === 0) setGait(1); // set off at a walk rather than standing there
+  });
   hud.button('btn-view', () => `View: ${follow.far ? 'Far' : 'Near'}`, () => (follow.far = !follow.far));
   hud.button('btn-quality', () => `Quality: ${QUALITY_LEVELS[qualityIndex].name}`, () => {
     qualityIndex = (qualityIndex + 1) % QUALITY_LEVELS.length;
@@ -115,10 +129,7 @@ async function start() {
 
   const keys = new Keyboard();
   const click = (id: string) => () => document.getElementById(id)!.click();
-  const gaitKey = (index: () => number) => () => {
-    horse.setGait(index());
-    refreshGait();
-  };
+  const gaitKey = (index: () => number) => () => setGait(index());
   keys.onPress(['KeyW', 'ArrowUp'], gaitKey(() => horse.gaitIndex + 1));
   keys.onPress(['KeyS', 'ArrowDown'], gaitKey(() => horse.gaitIndex - 1));
   ['KeyX', 'Digit1', 'Digit2', 'Digit3', 'Digit4'].forEach((code, i) => keys.onPress([code], gaitKey(() => i)));
@@ -141,7 +152,7 @@ async function start() {
   };
 
   // Debug handle for development and automated checks; not used by the game itself.
-  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow } });
+  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch } });
 
   let last = performance.now();
   let simTime = 0;
@@ -155,8 +166,8 @@ async function start() {
     const dt = Math.min(0.1, frameMs / 1000);
     last = now;
 
-    // Taking the reins: any steering key switches the autopilot off.
-    const steer = keys.steer();
+    // Taking the reins: any steering (keys or joystick) switches the auto-ride off.
+    const steer = keys.steer() || touch.steer;
     if (steer !== 0 && horse.autopilot) {
       horse.setAutopilot(false);
       refreshAuto();
