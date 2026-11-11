@@ -7,15 +7,33 @@ Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic We
 - **M1 Skeleton** – done: renderer, PWA, deploy.
 - **M2 Terrain & light** – done: one 2 km valley (river bed, lake, trail, enclosing hills), five blended
   ground materials, sky-image lighting, valley mist, filmic tone mapping.
-- Next: **M3 Horse**.
+- **M3 Horse** – riding done, model open: gaits with inertia, steering, jumping, terrain-following,
+  keyboard controls, follow camera. The horse on screen is a **stand-in built from simple shapes**;
+  a realistic rigged model still has to be chosen (see "Horse model" in `ASSETS.md`).
+- Next: realistic horse model, then **M4 Touch controls & camera**.
 
-## What you can do right now (M2)
-There is no horse yet. A camera rides the trail loop around the valley so the scenery and fps can be judged.
+## What you can do right now (M3)
+Ride the horse around the valley. It starts at a walk, steering itself along the trail.
 
-- **Drag** anywhere: look around (the view recentres by itself).
-- **Pace** button (or Space): Canter → Gallop → Stop → Walk → Trot.
-- **View** button (or V): rider's eye level ↔ bird's-eye overview.
-- **Quality** button (or Q): Low / Medium / High. It changes render resolution and terrain detail and is remembered.
+Keyboard (desktop):
+
+| Key | Action |
+|-----|--------|
+| **W** / **↑** | Faster gait: Halt → Walk → Trot → Canter → Gallop |
+| **S** / **↓** | Slower gait |
+| **X**, **1**, **2**, **3**, **4** | Halt, Walk, Trot, Canter, Gallop directly |
+| **A** **D** / **←** **→** | Steer (this also switches automatic steering off) |
+| **Space** | Jump (from a trot or faster) |
+| **T** | Automatic steering along the trail on/off |
+| **R** | Put the horse back on the trail (if it gets stuck) |
+| **V** | Camera near / far |
+| **Q** | Quality Low / Medium / High (render resolution and terrain detail; remembered) |
+
+On the iPad (no touch steering until M4): leave **Steering: Auto** on and use the **Gait**, **Jump**,
+**View** and **Quality** buttons. **Drag** anywhere to look around; the camera drifts back behind the horse.
+
+The horse slows on steep climbs and refuses slopes steeper than about 40°, slows in shallow water,
+and stops before water deeper than 1 m and before the edge of the map.
 
 ## Run locally
 ```
@@ -65,9 +83,10 @@ so the newest deploy appears on that launch. The overlay shows `build <date time
 confirm which build is running.
 
 ## On-screen overlay
-`60 fps (worst 17 ms) | WebGPU | calls 5 | tris 61k | geo 16 tex 22 | build 2026-11-10 19:38Z`
+`60 fps (worst 17 ms) | 3.8 m/s | WebGPU | calls 27 | tris 61k | geo 29 tex 22 | build 2026-11-11 05:38Z`
 
 - `fps`: average over the last half second; `worst`: the longest single frame in that time (stutter shows here first).
+- `m/s`: the horse's current speed (walk 1.7, trot 3.8, canter 6.5, gallop 12.5).
 - `WebGPU` / `WebGL2`: the render backend actually in use on this device.
 - `calls` / `tris`: draw calls and triangles per frame. Plan budget: under 150 calls and 200k triangles.
 - `geo` / `tex`: geometries and textures currently held on the GPU.

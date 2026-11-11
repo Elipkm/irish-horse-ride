@@ -1,4 +1,4 @@
-/** HTML overlay: stats line, loading screen and the three milestone-2 test buttons. */
+/** HTML overlay: stats line, loading screen and the on-screen buttons. */
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -22,7 +22,7 @@ export const hud = {
     el('hud').textContent = message;
   },
 
-  /** Wires a button: `label()` is re-read after every press. */
+  /** Wires a button: `label()` is re-read after every press. Returns a function that re-reads it on demand. */
   button(id: string, label: () => string, onPress: () => void) {
     const b = el<HTMLButtonElement>(id);
     const refresh = () => (b.textContent = label());
@@ -31,5 +31,6 @@ export const hud = {
       refresh();
     });
     refresh();
+    return refresh;
   },
 };
