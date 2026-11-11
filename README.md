@@ -7,10 +7,9 @@ Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic We
 - **M1 Skeleton** – done: renderer, PWA, deploy.
 - **M2 Terrain & light** – done: one 2 km valley (river bed, lake, trail, enclosing hills), five blended
   ground materials, sky-image lighting, valley mist, filmic tone mapping.
-- **M3 Horse** – riding done, model open: gaits with inertia, steering, jumping, terrain-following,
-  keyboard controls, follow camera. The horse on screen is a **stand-in built from simple shapes**;
-  a realistic rigged model still has to be chosen (see "Horse model" in `ASSETS.md`).
-- Next: realistic horse model, then **M4 Touch controls & camera**.
+- **M3 Horse** – done: realistic rigged horse (CC0) with walk, trot, canter and gallop animations matched
+  to its speed, steering, jumping, terrain-following, keyboard controls, follow camera.
+- Next: **M4 Touch controls & camera**.
 
 ## What you can do right now (M3)
 Ride the horse around the valley. It starts at a walk, steering itself along the trail.
@@ -57,6 +56,12 @@ npm run assets     # downloads raw CC0 files into assets-source/ and writes opti
 Only needed when adding or changing assets: the optimised files in `public/` are committed, the raw
 downloads in `assets-source/` are not. Every asset is listed with source and licence in `ASSETS.md`.
 
+The horse is the one asset that script does not build. Its source needs a signed-in download and Blender
+(details in `ASSETS.md`); with both in place, re-create `public/models/horse.glb` with:
+```
+blender -b --disable-autoexec --factory-startup "assets-source/horse/Horse Rigged All Gaits.blend" --python tools/horse_export.py -- public/models/horse.glb
+```
+
 ## Deploy (GitHub Pages)
 Hosting is GitHub Pages, built by GitHub Actions (`.github/workflows/deploy.yml`).
 
@@ -83,10 +88,10 @@ so the newest deploy appears on that launch. The overlay shows `build <date time
 confirm which build is running.
 
 ## On-screen overlay
-`60 fps (worst 17 ms) | 3.8 m/s | WebGPU | calls 27 | tris 61k | geo 29 tex 22 | build 2026-11-11 05:38Z`
+`60 fps (worst 17 ms) | 3.0 m/s | WebGPU | calls 10 | tris 86k | geo 21 tex 23 | build 2026-11-11 05:38Z`
 
 - `fps`: average over the last half second; `worst`: the longest single frame in that time (stutter shows here first).
-- `m/s`: the horse's current speed (walk 1.7, trot 3.8, canter 6.5, gallop 12.5).
+- `m/s`: the horse's current speed (walk 1.4, trot 3.0, canter 5.0, gallop 11).
 - `WebGPU` / `WebGL2`: the render backend actually in use on this device.
 - `calls` / `tris`: draw calls and triangles per frame. Plan budget: under 150 calls and 200k triangles.
 - `geo` / `tex`: geometries and textures currently held on the GPU.

@@ -34,15 +34,24 @@ All from Poly Haven, 1K JPG downloads of the `diff`, `nor_gl` and `arm` maps. Ea
 
 ## Horse model
 
-**Open: no model chosen yet.** The horse in the game is a stand-in generated in code
-(`src/player/proceduralHorse.ts`, no files, no licence). Candidates looked at on 2026-11-11:
+| File | Source | Author | License | Notes |
+|------|--------|--------|---------|-------|
+| `public/models/horse.glb` | https://blendswap.com/blend/28627 ("Horse Rigged All Gaits") | fdoss001 | CC0 | Converted with `tools/horse_export.py` (see below). 2.4 MB, about 30k triangles, one 1K coat texture, 80 bones. |
 
-| Candidate | Licence / price | Notes |
-|-----------|-----------------|-------|
-| "Horse Rigged All Gaits" by fdoss001, https://blendswap.com/blend/28627 | CC0, free | Realistic; walk, trot, canter, gallop; saddle and bridle. No idle or jump. 584 MB Blender file with particle hair and procedural coat: needs Blender to convert, simplify and bake to a GLB. |
-| "Realistic Horse with Animations" by Aragon 3D, https://www.fab.com/listings/95db4dc3-2f1b-456d-b3d1-8c924c728633 | Paid, about 85 EUR | Realistic; idle, all gaits, jump and more (20 clips). Listed in Unreal Engine format only, so it would need converting; check the licence allows use outside Unreal. |
-| Horse gait clips by Amitesh Nandan (Sketchfab) | CC BY-ND | Realistic, but "no derivatives" forbids the conversion and optimisation the game needs. Not usable. |
-| "Horse Rigged (Game Ready)" by abhayexe, https://sketchfab.com/3d-models/horse-riggedgame-ready-bc64f4ff7966474ca9bacd42fa73a754 | CC BY 4.0, free | Only 2.9k triangles: low-poly, not the realistic look the plan asks for. |
+Changes made by `tools/horse_export.py` (Blender 4.2 LTS):
+- Kept the horse body and its 80 deform bones; removed saddle, bridle, reins, the control rig, the fur
+  particle system and the teeth and gums (half the source polygons, never visible).
+- Mane and tail are particle hair in the source, which a GLB cannot hold: rebuilt as 560 skinned ribbons
+  that follow the source's combed guide hairs.
+- Coat uses the source's ready-made "brown_black" 1K colour texture (tinted darker in `src/player/gltfHorse.ts`);
+  hooves, eyes and hair are flat colours.
+- Animations baked to clips: `walk`, `trot`, `canter`, `gallop`, plus the idle fidgets `headShake`,
+  `headTossUp`, `headTossDown`, `tailLeft`, `tailRight`, `tailUp`. The source has no idle or jump clip:
+  standing uses the rest pose, jumping holds the gathered moment of the gallop.
+
+The source `.blend` (613 MB) is not committed and needs a signed-in BlendSwap account to download;
+put it in `assets-source/horse/` to re-run the export. The stand-in horse built in code
+(`src/player/proceduralHorse.ts`) remains as the fallback if the GLB fails to load.
 
 ## Generated at runtime (no files)
 
@@ -54,4 +63,5 @@ The stand-in horse and its ground shadow are also built in code: `src/player/pro
 
 | Package | Source | License | Notes |
 |---------|--------|---------|-------|
+| Blender 4.2 LTS (not in the repo) | https://www.blender.org/download/lts/4-2/ | GPL | Used only to run `tools/horse_export.py`. A portable copy can live in `assets-source/tools/`. Not part of the shipped game. |
 | `sharp` (dev dependency) | https://www.npmjs.com/package/sharp | Apache-2.0 | Used only by `npm run assets` to resize and pack textures. Not part of the shipped game. |

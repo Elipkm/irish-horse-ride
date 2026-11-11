@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { float, length, smoothstep, uniform, uv } from 'three/tsl';
+import { BlobShadow } from './blobShadow';
 import { TOP_SPEED, blendGait, newGaitBlend } from './gaits';
 
 export interface HorseMotion {
@@ -28,14 +28,14 @@ interface Leg {
 /**
  * Stand-in horse built from simple shapes in code, about 1.55 m at the withers. Its legs follow the
  * real footfall order of each gait at the speed the horse is actually moving. It exists so riding
- * can be built and tested before a realistic rigged model is chosen; it is also the fallback if
- * that model ever fails to load.
+ * could be built before the realistic model existed; now it is only the fallback if that model
+ * (public/models/horse.glb, see gltfHorse.ts) fails to load.
  */
 export class ProceduralHorse {
   /** Position and rotation are set by the controller. Local +z is the nose, +x the horse's left. */
   readonly root = new THREE.Group();
-  /** Soft dark patch on the ground under the horse. Add to the scene separately. */
-  readonly shadow: THREE.Mesh;
+  /** Add `shadow.mesh` to the scene separately. */
+  readonly shadow = new BlobShadow();
 
   private readonly body = new THREE.Group();
   private readonly neck = new THREE.Group();
@@ -43,7 +43,6 @@ export class ProceduralHorse {
   private readonly tail = new THREE.Group();
   private readonly legs: Leg[] = [];
   private readonly gait = newGaitBlend();
-  private readonly shadowStrength = uniform(0.6);
   private phase = 0;
   private time = 0;
   private moving = 0;
@@ -101,21 +100,6 @@ export class ProceduralHorse {
       // Hind legs rest slightly angled, as a real hock does.
       this.legs.push({ upper, lower, hind, upperRest: hind ? 0.22 : 0, lowerRest: hind ? -0.3 : 0 });
     }
-
-    // Blob shadow: cheap grounding until real shadows arrive with the forest milestone.
-    const shadowMat = new THREE.MeshBasicNodeMaterial({
-      color: 0x000000,
-      transparent: true,
-      depthWrite: false,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
-    });
-    // Darkest in the middle, fading to nothing at the edge of the quad.
-    shadowMat.opacityNode = this.shadowStrength.mul(float(1).sub(smoothstep(0.25, 1, length(uv().sub(0.5)).mul(2))));
-    shadowMat.fog = false;
-    this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.9).rotateX(-Math.PI / 2), shadowMat);
-    this.shadow.renderOrder = 1;
   }
 
   /** Call once per rendered frame, after the controller has posed `root`. */
@@ -164,8 +148,6 @@ export class ProceduralHorse {
     this.tail.rotation.x = 0.3 + 0.55 * fast + 0.04 * Math.sin(cycle * 2);
     this.tail.rotation.z = 0.07 * Math.sin(this.time * 1.7) + m.steer * 0.12;
 
-    this.shadow.position.set(this.root.position.x, this.root.position.y - m.heightAboveGround + 0.05, this.root.position.z);
-    this.shadow.rotation.copy(this.root.rotation);
-    this.shadowStrength.value = 0.6 * (1 - 0.6 * saturate(m.heightAboveGround / 1.5));
+    this.shadow.follow(this.root, m.heightAboveGround);
   }
 }

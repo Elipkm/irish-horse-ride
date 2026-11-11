@@ -4,6 +4,7 @@ import { QUALITY_LEVELS, loadQualityIndex, saveQualityIndex } from './engine/qua
 import { createRenderer } from './engine/renderer';
 import { Keyboard } from './input/keyboard';
 import { GAITS, TOP_SPEED } from './player/gaits';
+import { GltfHorse } from './player/gltfHorse';
 import { HorseController } from './player/horseController';
 import { ProceduralHorse } from './player/proceduralHorse';
 import { hud } from './ui/hud';
@@ -74,19 +75,23 @@ async function start() {
   // Load files and build the valley side by side; the bar tracks both.
   let filesDone = 0;
   let terrainDone = 0;
-  const FILES = GROUND_LAYERS.length * 2 + 1;
+  const FILES = GROUND_LAYERS.length * 2 + 2;
   const progress = () => hud.setLoading('Loading valley…', 0.05 + 0.45 * (filesDone / FILES) + 0.5 * terrainDone);
   const fileLoaded = () => {
     filesDone++;
     progress();
   };
-  const [ground, environment, field] = await Promise.all([
+  const [ground, environment, field, horseModel] = await Promise.all([
     loadGroundTextures(Math.min(4, renderer.getMaxAnisotropy()), fileLoaded),
     loadEnvironment(scene, './env/sky.hdr').then((e) => (fileLoaded(), e)),
     generateHeightfield((f) => {
       terrainDone = f;
       progress();
     }),
+    // If the horse file cannot be loaded, ride the simple code-built horse rather than nothing.
+    GltfHorse.load('./models/horse.glb')
+      .catch((err) => (console.warn('horse.glb failed to load, using the stand-in horse', err), new ProceduralHorse()))
+      .then((h) => (fileLoaded(), h)),
   ]);
 
   const terrain = new Terrain(field, ground);
@@ -94,8 +99,7 @@ async function start() {
   scene.add(terrain.mesh, createMountains(), createLakePlaceholder(field));
 
   const horse = new HorseController(field);
-  const horseModel = new ProceduralHorse();
-  scene.add(horseModel.root, horseModel.shadow);
+  scene.add(horseModel.root, horseModel.shadow.mesh);
   const follow = new FollowCamera(camera, field, renderer.domElement);
 
   const refreshGait = hud.button('btn-gait', () => `Gait: ${horse.gait.name}`, () => horse.setGait((horse.gaitIndex + 1) % GAITS.length));

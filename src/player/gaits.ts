@@ -5,7 +5,11 @@ export interface Gait {
   name: string;
   /** Cruising speed in m/s. */
   speed: number;
-  /** Ground covered by one full stride cycle, in metres. Speed / stride = strides per second. */
+  /**
+   * Ground covered by one full stride cycle, in metres. Speed / stride = strides per second.
+   * Speeds and strides are matched to the horse model's animation clips (measured by
+   * tools/horse_export.py) so the hooves do not slide over the ground.
+   */
   stride: number;
   /** Fraction of the cycle each hoof spends on the ground. */
   duty: number;
@@ -19,15 +23,15 @@ export interface Gait {
 }
 
 export const GAITS: readonly Gait[] = [
-  { name: 'Halt', speed: 0, stride: 1.7, duty: 0.64, bob2: 0, bob1: 0, rock: 0, offsets: [0, 0.25, 0.5, 0.75] },
+  { name: 'Halt', speed: 0, stride: 1.33, duty: 0.64, bob2: 0, bob1: 0, rock: 0, offsets: [0, 0.25, 0.5, 0.75] },
   // Four-beat walk: LH, LF, RH, RF.
-  { name: 'Walk', speed: 1.7, stride: 1.8, duty: 0.62, bob2: 0.012, bob1: 0, rock: 0.004, offsets: [0, 0.25, 0.5, 0.75] },
+  { name: 'Walk', speed: 1.4, stride: 1.33, duty: 0.62, bob2: 0.012, bob1: 0, rock: 0.004, offsets: [0, 0.25, 0.5, 0.75] },
   // Two-beat trot: diagonal pairs together.
-  { name: 'Trot', speed: 3.8, stride: 2.6, duty: 0.45, bob2: 0.04, bob1: 0, rock: 0.005, offsets: [0, 0.5, 0.5, 1] },
+  { name: 'Trot', speed: 3.0, stride: 1.95, duty: 0.45, bob2: 0.04, bob1: 0, rock: 0.005, offsets: [0, 0.5, 0.5, 1] },
   // Three-beat canter (right lead): LH, then RH + LF, then RF.
-  { name: 'Canter', speed: 6.5, stride: 3.4, duty: 0.4, bob2: 0, bob1: 0.05, rock: 0.05, offsets: [0, 0.3, 0.3, 0.6] },
+  { name: 'Canter', speed: 5.0, stride: 2.6, duty: 0.4, bob2: 0, bob1: 0.05, rock: 0.05, offsets: [0, 0.3, 0.3, 0.6] },
   // Four-beat gallop: LH, RH, LF, RF.
-  { name: 'Gallop', speed: 12.5, stride: 5.8, duty: 0.3, bob2: 0, bob1: 0.045, rock: 0.06, offsets: [0, 0.4, 0.1, 0.5] },
+  { name: 'Gallop', speed: 11, stride: 4.6, duty: 0.3, bob2: 0, bob1: 0.045, rock: 0.06, offsets: [0, 0.4, 0.1, 0.5] },
 ];
 
 export const TOP_SPEED = GAITS[GAITS.length - 1].speed;
