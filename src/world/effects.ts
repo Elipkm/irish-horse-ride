@@ -44,6 +44,10 @@ export class Effects {
   private time = 0;
   /** Chimney tops that smoke (set by the game once the cottages exist). */
   chimneys: THREE.Vector3[] = [];
+  /** Called for every hoofbeat (and a heavy one on landing), for the sound. `wood` = on the bridge. */
+  onHoof: ((kind: 'water' | 'wood' | 'mud' | 'trail' | 'grass', speed: number, landing: boolean) => void) | null = null;
+  /** Is (x, z) on the bridge deck? Set by the game. */
+  onBridge: ((x: number, z: number) => boolean) | null = null;
   private smoke = 0;
   private readonly swarms: Swarm[] = [];
   private readonly light = new THREE.Vector3();
@@ -131,6 +135,12 @@ export class Effects {
     const surface = this.surfaceAt(x, z);
     const pace = Math.min(1, horse.speed / GAITS[3].speed); // 0 standing … 1 at a canter and above
     const f = this.forward;
+    if (this.onHoof) {
+      const kind = horse.waterDepth > 0.04 ? 'water' : this.onBridge?.(x, z) ? 'wood' : surface;
+      // A landing is one heavy beat, not five.
+      this.onHoof(kind, horse.speed, landed);
+      if (!landed) for (let n = 1; n < kicks; n++) this.onHoof(kind, horse.speed, false);
+    }
     for (let n = 0; n < kicks; n++) {
       // Somewhere under the body, left or right.
       const back = rnd(-0.9, 0.7);

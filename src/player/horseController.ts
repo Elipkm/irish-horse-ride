@@ -48,6 +48,12 @@ export class HorseController {
   /** When on, the horse follows the trail by itself. */
   autopilot = false;
   obstacles: Obstacles | null = null;
+  /** Wind left for the gallop, 0..1. Gallop drains it, walking and standing refill it. */
+  stamina = 1;
+  /** Winded: the horse will not gallop until it has had a breather. */
+  exhausted = false;
+  /** Metres ridden since the game was loaded (the game adds this to the saved total). */
+  distance = 0;
 
   speed = 0;
   steer = 0;
@@ -74,7 +80,7 @@ export class HorseController {
   }
 
   get gait() {
-    return GAITS[this.gaitIndex];
+    return GAITS[this.exhausted ? Math.min(this.gaitIndex, GAITS.length - 2) : this.gaitIndex];
   }
 
   setGait(index: number) {
@@ -88,6 +94,24 @@ export class HorseController {
   setAutopilot(on: boolean) {
     if (on && !this.autopilot) this.trailU = this.nearestTrailU();
     this.autopilot = on;
+  }
+
+  /** Stands the horse at a saved spot, if that is somewhere it could be; otherwise on the trail. */
+  placeAt(x: number, z: number, heading: number) {
+    const { heightAt, waterLevelAt } = this.field;
+    const limit = HALF - EDGE_MARGIN;
+    const ok = Number.isFinite(x + z + heading) && Math.abs(x) < limit && Math.abs(z) < limit && waterLevelAt(x, z) - heightAt(x, z) < MAX_WADE_DEPTH * 0.7;
+    if (!ok) return;
+    const c = this.cur;
+    c.x = x;
+    c.z = z;
+    c.y = heightAt(x, z);
+    c.heading = heading;
+    c.pitch = c.roll = 0;
+    Object.assign(this.prev, c);
+    this.speed = this.steer = this.verticalSpeed = 0;
+    this.grounded = true;
+    this.trailU = this.nearestTrailU();
   }
 
   /** Puts the horse back on the nearest bit of trail, standing still (for when it gets stuck). */
@@ -136,6 +160,8 @@ export class HorseController {
 
     c.x += fx * this.speed * dt;
     c.z += fz * this.speed * dt;
+    this.distance += this.speed * dt;
+    this.tire(dt);
     // Brushing a trunk: slide round it, and no faster than a walk.
     if (this.obstacles?.pushOut(c, BODY_RADIUS, this.heightAboveGround)) this.speed = Math.min(this.speed, GAITS[1].speed);
     hFore = heightAt(c.x + fx * HALF_BODY, c.z + fz * HALF_BODY);
@@ -184,6 +210,18 @@ export class HorseController {
     object.position.set(lerp(a.x, b.x, alpha), lerp(a.y, b.y, alpha), lerp(a.z, b.z, alpha));
     // Local +z is the horse's nose; a positive x rotation would tip the nose down.
     object.rotation.set(-lerp(a.pitch, b.pitch, alpha), this.renderHeading, lerp(a.roll, b.roll, alpha), 'YXZ');
+  }
+
+  /** Stamina: a gallop uses it up in about half a minute; a walk or a halt gives it back. */
+  private tire(dt: number) {
+    const v = this.speed;
+    if (v > GAITS[3].speed + 0.5) this.stamina -= (0.035 * (v - GAITS[3].speed)) / (GAITS[4].speed - GAITS[3].speed) * dt;
+    else if (v < 0.3) this.stamina += 0.12 * dt;
+    else if (v < GAITS[2].speed + 0.2) this.stamina += 0.06 * dt;
+    else if (v < GAITS[3].speed - 0.5) this.stamina += 0.015 * dt;
+    this.stamina = Math.min(1, Math.max(0, this.stamina));
+    if (this.stamina <= 0.01) this.exhausted = true;
+    else if (this.stamina >= 0.35) this.exhausted = false;
   }
 
   private placeOnTrail(u: number) {

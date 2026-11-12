@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { GameAudio } from './audio/gameAudio';
 import { FollowCamera } from './camera/followCamera';
 import { QUALITY_LEVELS, loadQualityIndex, saveQualityIndex } from './engine/quality';
 import { createRenderer } from './engine/renderer';
@@ -8,7 +9,10 @@ import { TOP_SPEED } from './player/gaits';
 import { GltfHorse } from './player/gltfHorse';
 import { HorseController } from './player/horseController';
 import { ProceduralHorse } from './player/proceduralHorse';
+import { Objectives, type Waypoint } from './game/objectives';
+import { loadSave, writeSave } from './game/save';
 import { hud } from './ui/hud';
+import { Beacon } from './world/beacon';
 import { createMountains } from './world/backdrop';
 import { Effects } from './world/effects';
 import { loadEnvironment } from './world/environment';
@@ -19,7 +23,7 @@ import { Crows } from './world/crows';
 import { planLandmarks, TOWER } from './world/landmarkPlan';
 import { Landmarks } from './world/landmarks';
 import { SheepFlocks } from './world/sheep';
-import { generateHeightfield } from './world/heightfield';
+import { RIVER_HALF_WIDTH, RIVER_Z0, RIVER_Z1, generateHeightfield, riverX, valleyAxis } from './world/heightfield';
 import { Particles } from './world/particles';
 import { Rain } from './world/rain';
 import { CloudLayer } from './world/sky';
@@ -29,8 +33,8 @@ import { Weather } from './world/weather';
 import { windTime } from './world/wind';
 import { GROUND_LAYERS, type GroundTextures } from './world/terrainMaterial';
 
-// M7: the valley is lived in: field walls and gates, a ruined abbey and round tower, a stone circle,
-// a bridge, cottages with smoking chimneys, sheep and crows.
+// M8: sound (all made in code), places to find with a pointer and a column of light, stamina,
+// photo mode, and a save that remembers where you were and what you have found.
 
 const STEP = 1 / 60; // fixed time step of the riding simulation
 
@@ -163,6 +167,47 @@ async function start() {
   const follow = new FollowCamera(camera, field);
   follow.structures = plan.colliders;
 
+  // ---- M8: sound, places to find, saved progress.
+  const audio = new GameAudio();
+  const bridge = plan.bridge;
+  const bridgeCos = Math.cos(bridge.rot);
+  const bridgeSin = Math.sin(bridge.rot);
+  effects.onHoof = (kind, speed, landing) => audio.hoof(kind, speed, landing);
+  effects.onBridge = (x, z) => {
+    const dx = x - bridge.x;
+    const dz = z - bridge.z;
+    return Math.abs(dx * bridgeCos + dz * bridgeSin) <= bridge.halfLength && Math.abs(-dx * bridgeSin + dz * bridgeCos) <= bridge.halfWidth;
+  };
+
+  const waypoints: Waypoint[] = [
+    { id: 'abbey', name: 'Ruined abbey', x: plan.abbey.x, z: plan.abbey.z, radius: 30 },
+    { id: 'bridge', name: 'Old stone bridge', x: bridge.x, z: bridge.z, radius: 16 },
+    { id: 'stones', name: 'Stone circle', x: field.sites.stoneCircleHill.x, z: field.sites.stoneCircleHill.z, radius: 16 },
+    { id: 'cottage', name: 'Cottage by the lake', x: plan.cottages[2].x, z: plan.cottages[2].z, radius: 18 },
+    { id: 'eastshore', name: 'Lake view', x: valleyAxis(400) + 212, z: 400, radius: 22 },
+    { id: 'southshore', name: 'South shore', x: valleyAxis(672), z: 672, radius: 22 },
+  ];
+  const saved = loadSave();
+  const objectives = new Objectives(waypoints, saved?.visited ?? []);
+  const beacon = new Beacon();
+  scene.add(beacon.mesh);
+  const savedDistance = saved?.distance ?? 0;
+  let photos = saved?.photos ?? 0;
+  if (saved) horse.placeAt(saved.x, saved.z, saved.heading);
+  const save = () => {
+    writeSave({
+      visited: [...objectives.visited],
+      x: horseModel.root.position.x,
+      z: horseModel.root.position.z,
+      heading: horse.renderHeading,
+      distance: savedDistance + horse.distance,
+      photos,
+    });
+  };
+  document.addEventListener('visibilitychange', () => document.hidden && save());
+  window.addEventListener('pagehide', save);
+  let saveIn = 5;
+
   const setGait = (index: number) => {
     horse.setGait(index);
     touch.showGait(horse.gaitIndex);
@@ -181,6 +226,7 @@ async function start() {
   });
   hud.button('btn-view', () => `View: ${follow.far ? 'Far' : 'Near'}`, () => (follow.far = !follow.far));
   hud.button('btn-weather', () => `Weather: ${weather.name}`, () => weather.next());
+  hud.button('btn-sound', () => `Sound: ${audio.name}`, () => audio.next());
   hud.button('btn-quality', () => `Quality: ${QUALITY_LEVELS[qualityIndex].name}`, () => {
     qualityIndex = (qualityIndex + 1) % QUALITY_LEVELS.length;
     saveQualityIndex(qualityIndex);
@@ -193,13 +239,75 @@ async function start() {
     rain.setDrops(QUALITY_LEVELS[qualityIndex].rainDrops);
   });
 
+  // ---- Photo mode: HUD hidden, horse halted, camera free to drag round; the shutter saves a picture.
+  let photoMode = false;
+  let photoGait = 0;
+  let capture = false;
+  const setPhoto = (on: boolean) => {
+    if (on === photoMode) return;
+    photoMode = on;
+    document.body.classList.toggle('photo', on);
+    follow.photo = on;
+    if (on) {
+      photoGait = horse.gaitIndex;
+      horse.setAutopilot(false);
+      refreshAuto();
+      setGait(0);
+    } else {
+      setGait(photoGait);
+    }
+  };
+  const shutter = () => {
+    capture = true;
+  };
+  const deliver = async (blob: Blob | null) => {
+    if (!blob) return hud.toast('Could not take the photo');
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+    const file = new File([blob], `irish-ride-${stamp}.jpg`, { type: 'image/jpeg' });
+    photos++;
+    save();
+    // On the iPad the share sheet offers "Save Image"; elsewhere the file downloads.
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Irish Horse Ride' });
+        return;
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return; // the rider closed the sheet
+      }
+    }
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    hud.toast('Photo saved to your downloads');
+  };
+  hud.button('btn-photo', () => 'Photo', () => setPhoto(true));
+  document.getElementById('btn-shutter')!.addEventListener('click', shutter);
+  document.getElementById('btn-photo-close')!.addEventListener('click', () => setPhoto(false));
+
+  let objectiveIn = 0;
+  hud.onObjectiveTap(() => {
+    if (objectives.done) {
+      if (confirm('Start the journey again? The places you have found are forgotten.')) objectives.reset();
+    } else {
+      objectives.cycle();
+    }
+    objectiveIn = 0;
+  });
+
   const keys = new Keyboard();
   const click = (id: string) => () => document.getElementById(id)!.click();
   const gaitKey = (index: () => number) => () => setGait(index());
   keys.onPress(['KeyW', 'ArrowUp'], gaitKey(() => horse.gaitIndex + 1));
   keys.onPress(['KeyS', 'ArrowDown'], gaitKey(() => horse.gaitIndex - 1));
   ['KeyX', 'Digit1', 'Digit2', 'Digit3', 'Digit4'].forEach((code, i) => keys.onPress([code], gaitKey(() => i)));
-  keys.onPress(['Space'], () => horse.jump());
+  keys.onPress(['Space'], () => (photoMode ? shutter() : horse.jump()));
+  keys.onPress(['Enter'], () => photoMode && shutter());
+  keys.onPress(['KeyM'], click('btn-sound'));
+  keys.onPress(['KeyC'], () => setPhoto(!photoMode));
+  keys.onPress(['Escape'], () => photoMode && setPhoto(false));
   keys.onPress(['KeyT'], click('btn-auto'));
   keys.onPress(['KeyV'], click('btn-view'));
   keys.onPress(['KeyQ'], click('btn-quality'));
@@ -219,7 +327,32 @@ async function start() {
   };
 
   // Debug handle for development and automated checks; not used by the game itself.
-  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest, water, clouds, godRays, rain, particles, effects, weather, plan, landmarks, sheep, crows } });
+  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest, water, clouds, godRays, rain, particles, effects, weather, plan, landmarks, sheep, crows, audio, objectives, beacon } });
+
+  let waterIn = 0;
+  let wasExhausted = false;
+  let shownStamina = -1;
+  const look = new THREE.Vector3();
+  /** 0..1: how close the nearest river bank / lake shore is (1 = at the water). */
+  const waterNear = (x: number, z: number) => {
+    let river = 0;
+    if (z > RIVER_Z0 && z < RIVER_Z1) river = Math.max(0, (50 - Math.max(0, Math.abs(x - riverX(z)) - RIVER_HALF_WIDTH * 0.5)) / 50);
+    let lake = 0;
+    for (let a = 0; a < 8 && lake < 1; a++) {
+      const dx = Math.cos((a / 8) * Math.PI * 2);
+      const dz = Math.sin((a / 8) * Math.PI * 2);
+      for (const r of [0, 10, 22, 40, 65]) {
+        const sx = x + dx * r;
+        const sz = z + dz * r;
+        const inRiver = sz > RIVER_Z0 && sz < RIVER_Z1 - 30 && Math.abs(sx - riverX(sz)) < RIVER_HALF_WIDTH + 6;
+        if (!inRiver && field.waterLevelAt(sx, sz) - field.heightAt(sx, sz) > 0.1) {
+          lake = Math.max(lake, 1 - r / 80);
+          break;
+        }
+      }
+    }
+    return { river, lake };
+  };
 
   let last = performance.now();
   let simTime = 0;
@@ -235,7 +368,7 @@ async function start() {
     last = now;
 
     // Taking the reins: any steering (keys or joystick) switches the auto-ride off.
-    const steer = keys.steer() || touch.steer;
+    const steer = photoMode ? 0 : keys.steer() || touch.steer;
     if (steer !== 0 && horse.autopilot) {
       horse.setAutopilot(false);
       refreshAuto();
@@ -263,7 +396,69 @@ async function start() {
     particles.update(dt, camera);
     effects.update(dt, horse, horseModel.root, horseModel.nosePosition(nose), camera);
     particles.commit();
+
+    // ---- M8 per frame: sound, places to find, stamina, saving.
+    audio.speed01 = horse.speed / TOP_SPEED;
+    waterIn -= dt;
+    if (waterIn <= 0) {
+      waterIn = 0.25;
+      const w = waterNear(horseModel.root.position.x, horseModel.root.position.z);
+      audio.nearRiver = w.river;
+      audio.nearLake = w.lake;
+    }
+    audio.update(dt);
+
+    const found = objectives.update(horseModel.root.position.x, horseModel.root.position.z);
+    if (found) {
+      hud.toast(
+        objectives.done ? `Found: ${found.name}. You have found every place in the valley!` : `Found: ${found.name} (${objectives.visited.size} of ${waypoints.length})`,
+        5000
+      );
+      save();
+      objectiveIn = 0;
+    }
+    objectiveIn -= dt;
+    if (objectiveIn <= 0) {
+      objectiveIn = 0.1;
+      objectives.ensureTarget(horseModel.root.position.x, horseModel.root.position.z);
+      const target = objectives.current;
+      if (target) {
+        const dx = target.x - horseModel.root.position.x;
+        const dz = target.z - horseModel.root.position.z;
+        camera.getWorldDirection(look);
+        // Angle from straight ahead (screen up), clockwise: right of the view is (-look.z, look.x).
+        const bearing = Math.atan2(dx * -look.z + dz * look.x, dx * look.x + dz * look.z);
+        const d = Math.hypot(dx, dz);
+        const dist = d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${Math.round(d / 10) * 10} m`;
+        hud.setObjective(target.name, `${dist} · ${objectives.visited.size} of ${waypoints.length} found · tap for another`, (bearing * 180) / Math.PI);
+        beacon.place({ x: target.x, y: field.heightAt(target.x, target.z), z: target.z });
+      } else {
+        hud.setObjective('All places found', 'Tap to start again', 0);
+        beacon.place(null);
+      }
+    }
+    if (horse.exhausted !== wasExhausted) {
+      wasExhausted = horse.exhausted;
+      if (wasExhausted) hud.toast('Your horse is out of breath: walk for a while to let it recover');
+    }
+    const staminaShown = Math.round(horse.stamina * 50);
+    if (staminaShown !== shownStamina) {
+      shownStamina = staminaShown;
+      hud.setStamina(horse.stamina, horse.exhausted);
+    }
+    saveIn -= dt;
+    if (saveIn <= 0) {
+      saveIn = 5;
+      save();
+    }
+
     renderer.render(scene, camera);
+    if (capture) {
+      // Taken straight after the draw, while the picture is still on the canvas.
+      capture = false;
+      hud.flash();
+      renderer.domElement.toBlob((blob) => void deliver(blob), 'image/jpeg', 0.92);
+    }
 
     if (firstFrame) {
       firstFrame = false;

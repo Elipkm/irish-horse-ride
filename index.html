@@ -38,6 +38,25 @@
       #hint .touch { display: none; }
       @media (any-pointer: coarse) { #hint .touch { display: inline; } #hint .keys { display: none; } }
       @keyframes hint { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+      /* M8: objective pointer, stamina, toasts, photo mode. */
+      #objective { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 56px); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 8px; border-radius: 24px; background: rgba(0,0,0,.38); color: #fff; font: 14px/1.25 system-ui, sans-serif; touch-action: none; }
+      #objective[hidden], #stamina[hidden] { display: none; }
+      #compass { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: rgba(207,227,180,.9); color: #16261b; font-size: 17px; }
+      #obj-name { display: block; font-weight: 600; }
+      #obj-dist { opacity: .8; font-size: 12px; }
+      #stamina { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 108px); transform: translateX(-50%); width: 120px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.35); overflow: hidden; pointer-events: none; }
+      #stamina-bar { height: 100%; width: 100%; background: #cfe3b4; transition: background .3s; }
+      #stamina.tired #stamina-bar { background: #e8b25a; }
+      #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 150px); transform: translateX(-50%); padding: 10px 18px; border-radius: 18px; background: rgba(20,36,26,.8); color: #fff; font: 16px system-ui, sans-serif; text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; }
+      #toast.show { opacity: 1; }
+      #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+      #flash.go { animation: flash .35s ease-out; }
+      @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
+      #photo-ui { display: none; position: fixed; right: calc(env(safe-area-inset-right) + 24px); top: 50%; transform: translateY(-50%); flex-direction: column; align-items: center; gap: 22px; }
+      #btn-shutter { width: 84px; height: 84px; border-radius: 50%; border: 5px solid #fff; background: rgba(255,255,255,.35); }
+      #btn-photo-close { min-height: 40px; padding: 0 16px; border-radius: 20px; }
+      body.photo #photo-ui { display: flex; }
+      body.photo #hud, body.photo #controls, body.photo #ride, body.photo #objective, body.photo #stamina { display: none; }
     </style>
   </head>
   <body>
@@ -46,6 +65,8 @@
       <button id="btn-auto" type="button"></button>
       <button id="btn-view" type="button"></button>
       <button id="btn-weather" type="button"></button>
+      <button id="btn-sound" type="button"></button>
+      <button id="btn-photo" type="button">Photo</button>
       <button id="btn-quality" type="button"></button>
     </div>
     <div id="ride" hidden>
@@ -56,6 +77,17 @@
         <span class="touch">Left thumb steers · buttons set the pace · drag to look around</span>
         <span class="keys">W / S pace · A / D steer · Space jump · drag to look around</span>
       </div>
+    </div>
+    <div id="objective" hidden>
+      <div id="compass">▲</div>
+      <div><span id="obj-name"></span><span id="obj-dist"></span></div>
+    </div>
+    <div id="stamina" hidden><div id="stamina-bar"></div></div>
+    <div id="toast"></div>
+    <div id="flash"></div>
+    <div id="photo-ui">
+      <button id="btn-shutter" type="button" aria-label="Take photo"></button>
+      <button id="btn-photo-close" type="button">Done</button>
     </div>
     <div id="loading">
       <div id="loading-label">Starting…</div>

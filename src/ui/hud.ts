@@ -2,6 +2,8 @@
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
+let toastTimer = 0;
+
 export const hud = {
   setStats(text: string) {
     el('hud').textContent = text;
@@ -16,6 +18,40 @@ export const hud = {
     el('loading').remove();
     el('controls').hidden = false;
     el('ride').hidden = false;
+    el('objective').hidden = false;
+    el('stamina').hidden = false;
+  },
+
+  /** Objective pointer: place name, detail line, and the arrow's angle in degrees (0 = straight ahead). */
+  setObjective(name: string, detail: string, bearingDeg: number) {
+    el('obj-name').textContent = name;
+    el('obj-dist').textContent = detail;
+    el('compass').style.transform = `rotate(${bearingDeg.toFixed(1)}deg)`;
+  },
+
+  onObjectiveTap(action: () => void) {
+    el('objective').addEventListener('click', action);
+  },
+
+  setStamina(fraction: number, tired: boolean) {
+    el('stamina-bar').style.width = `${Math.round(fraction * 100)}%`;
+    el('stamina').classList.toggle('tired', tired);
+  },
+
+  /** A short message in the upper middle of the screen. */
+  toast(text: string, ms = 3500) {
+    const t = el('toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => t.classList.remove('show'), ms);
+  },
+
+  flash() {
+    const f = el('flash');
+    f.classList.remove('go');
+    void f.offsetWidth; // restart the animation
+    f.classList.add('go');
   },
 
   showError(message: string) {

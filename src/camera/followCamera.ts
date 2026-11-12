@@ -17,6 +17,8 @@ export class FollowCamera {
   far = false;
   /** True while a finger is down looking around: stops the view drifting back. */
   held = false;
+  /** Photo mode: the view stays where it was dragged instead of drifting back behind the horse. */
+  photo = false;
   /** Tall built things (abbey walls, tower, cottages) the camera must see over rather than through. */
   structures: { topAt(x: number, z: number): number } | null = null;
 
@@ -40,7 +42,7 @@ export class FollowCamera {
   /** Look around by a drag of this many pixels. */
   look(dx: number, dy: number) {
     this.yaw -= dx * 0.006;
-    this.pitch = THREE.MathUtils.clamp(this.pitch + dy * 0.004, -0.5, 1.0);
+    this.pitch = THREE.MathUtils.clamp(this.pitch + dy * 0.004, this.photo ? -0.25 : -0.5, 1.0);
     this.idle = 0;
   }
 
@@ -51,7 +53,7 @@ export class FollowCamera {
     this.basePitch += ((this.far ? 0.5 : 0.2) - this.basePitch) * ease(3);
     this.rush += (speed01 - this.rush) * ease(1.5);
 
-    if (this.held) {
+    if (this.held || this.photo) {
       this.idle = 0;
     } else {
       this.idle += dt;

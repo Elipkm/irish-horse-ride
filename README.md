@@ -22,9 +22,28 @@ Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic We
   a ruined abbey with a round tower, high cross and graves, a stone circle on the hill, a hump-backed
   bridge where the trail crosses the river, three thatched cottages with smoking chimneys, flocks of
   sheep that move off when you ride up, and crows round the tower.
-- Next: **M8 Audio + HUD + waypoints + photo mode + save**.
+- **M8 Audio + HUD + waypoints + photo mode + save** - done: sound made entirely in code (hoofbeats that
+  change with the ground, wind, rain, stream and lake, birdsong, breathing, a slow whistle tune), six places
+  to find with a pointer and a column of light, a stamina bar, photo mode, and a save.
+- Next: **M9 Polish**.
 
-## What you can do right now (M7)
+## M8 features
+- **Sound** (top right, or **M**): On, No music, Off. iOS only starts sound after your first touch, and
+  the iPad's silent switch / Control Centre mute also silences web audio.
+- **Places to find**: Ruined abbey, Old stone bridge, Stone circle, Cottage by the lake, Lake view, South
+  shore. The panel at the top shows the one you are heading for with an arrow and the distance, and a pale
+  column of light stands over it. Ride within a few metres to find it; **tap the panel** to point at another
+  place. Once all six are found, tap it to start again. No timer, nothing to lose.
+- **Stamina** (small bar under the panel): galloping uses it up in about half a minute, walking and
+  standing refill it. When it runs out the horse will not gallop until it has recovered a little.
+- **Photo** (top right, or **C**): hides the buttons and halts the horse; drag to frame the view, press the
+  round shutter (or Space / Enter). On the iPad the share sheet opens, choose Save Image; on a computer
+  the picture downloads. **Done** (or Esc) returns to riding.
+- **Save**: found places, the horse's position, distance and photo count are saved in the browser every few
+  seconds and when the app goes to the background; the game resumes where you left off. (**R** puts the horse
+  back on the trail.) Clear the site's data in Safari to start fresh.
+
+## What you can do right now (M7 riding)
 Ride the horse around the valley. It starts standing on the trail. Woods cover the lower valley sides
 and the trail passes through a few of them; the horse slows to a walk and slides round a trunk if you
 ride into one. Bushes and grass can be ridden through. The river can be waded anywhere (the trail

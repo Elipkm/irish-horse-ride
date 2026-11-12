@@ -93,3 +93,9 @@ are rendered from those models when the game starts (`src/world/forest.ts`). The
 |---------|--------|---------|-------|
 | Blender 4.2 LTS (not in the repo) | https://www.blender.org/download/lts/4-2/ | GPL | Used only to run `tools/horse_export.py`. A portable copy can live in `assets-source/tools/`. Not part of the shipped game. |
 | `sharp` (dev dependency) | https://www.npmjs.com/package/sharp | Apache-2.0 | Used only by `npm run assets` to resize and pack textures. Not part of the shipped game. |
+
+## Sound, waypoints, photo mode (M8)
+
+No asset files. Every sound (hoofbeats, wind, rain, stream, birds, breathing, the drone and whistle tune)
+is synthesised at run time with the Web Audio API in `src/audio/gameAudio.ts`. The column of light over
+the current place is a plain code-built mesh.
