@@ -1,7 +1,9 @@
 import * as THREE from 'three/webgpu';
 import { GameAudio } from './audio/gameAudio';
 import { FollowCamera } from './camera/followCamera';
-import { QUALITY_LEVELS, loadQualityIndex, saveQualityIndex } from './engine/quality';
+import { AutoQuality } from './engine/autoQuality';
+import { PostFx } from './engine/postfx';
+import { QUALITY_LEVELS, loadAutoQuality, loadQualityIndex, saveAutoQuality, saveQualityIndex } from './engine/quality';
 import { createRenderer } from './engine/renderer';
 import { Keyboard } from './input/keyboard';
 import { TouchControls } from './input/touchControls';
@@ -29,6 +31,7 @@ import { Rain } from './world/rain';
 import { CloudLayer } from './world/sky';
 import { Terrain } from './world/terrain';
 import { Water } from './world/water';
+import { TimeOfDay } from './world/timeOfDay';
 import { Weather } from './world/weather';
 import { windTime } from './world/wind';
 import { GROUND_LAYERS, type GroundTextures } from './world/terrainMaterial';
@@ -143,6 +146,7 @@ async function start() {
   const rain = new Rain(environment, QUALITY_LEVELS[qualityIndex].rainDrops);
   const particles = new Particles();
   const effects = new Effects(particles, field, forest, environment);
+  const timeOfDay = new TimeOfDay(renderer, environment);
   const weather = new Weather(scene, environment);
   scene.add(water.mesh, clouds.mesh, godRays.mesh, rain.mesh, particles.mesh);
 
@@ -227,17 +231,41 @@ async function start() {
   hud.button('btn-view', () => `View: ${follow.far ? 'Far' : 'Near'}`, () => (follow.far = !follow.far));
   hud.button('btn-weather', () => `Weather: ${weather.name}`, () => weather.next());
   hud.button('btn-sound', () => `Sound: ${audio.name}`, () => audio.next());
-  hud.button('btn-quality', () => `Quality: ${QUALITY_LEVELS[qualityIndex].name}`, () => {
-    qualityIndex = (qualityIndex + 1) % QUALITY_LEVELS.length;
-    saveQualityIndex(qualityIndex);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY_LEVELS[qualityIndex].pixelRatio));
-    terrain.setLodRange(QUALITY_LEVELS[qualityIndex].terrainRange);
-    grass.setDensity(QUALITY_LEVELS[qualityIndex].grassTufts);
-    forest.setNearRange(QUALITY_LEVELS[qualityIndex].treeRange);
-    water.setQuality(QUALITY_LEVELS[qualityIndex]);
-    godRays.mesh.visible = QUALITY_LEVELS[qualityIndex].lightShafts;
-    rain.setDrops(QUALITY_LEVELS[qualityIndex].rainDrops);
+  // Quality: Auto (the default) steps between the levels by itself to hold the frame rate; the button
+  // cycles Auto, Low, Medium, High.
+  const applyQuality = (i: number) => {
+    qualityIndex = i;
+    const q = QUALITY_LEVELS[i];
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatio));
+    terrain.setLodRange(q.terrainRange);
+    grass.setDensity(q.grassTufts);
+    forest.setNearRange(q.treeRange);
+    water.setQuality(q);
+    godRays.mesh.visible = q.lightShafts;
+    rain.setDrops(q.rainDrops);
+  };
+  const autoQuality = new AutoQuality(QUALITY_LEVELS.length - 1, qualityIndex, (i) => {
+    const lowered = i < qualityIndex;
+    applyQuality(i);
+    if (lowered) hud.toast(`Quality lowered to ${QUALITY_LEVELS[i].name} to keep the ride smooth`, 3000);
   });
+  autoQuality.enabled = loadAutoQuality();
+  hud.button('btn-quality', () => (autoQuality.enabled ? `Quality: Auto (${QUALITY_LEVELS[qualityIndex].name})` : `Quality: ${QUALITY_LEVELS[qualityIndex].name}`), () => {
+    if (autoQuality.enabled) {
+      autoQuality.enabled = false;
+      applyQuality(0);
+    } else if (qualityIndex === QUALITY_LEVELS.length - 1) {
+      autoQuality.enabled = true;
+      autoQuality.setLevel(qualityIndex);
+    } else {
+      applyQuality(qualityIndex + 1);
+    }
+    saveAutoQuality(autoQuality.enabled);
+    if (!autoQuality.enabled) saveQualityIndex(qualityIndex);
+  });
+  const post = new PostFx(renderer, scene, camera);
+  hud.button('btn-effects', () => `Effects: ${post.wanted ? 'On' : 'Off'}`, () => post.setWanted(!post.wanted));
+  hud.button('btn-time', () => `Time: ${timeOfDay.name}`, () => timeOfDay.next());
 
   // ---- Photo mode: HUD hidden, horse halted, camera free to drag round; the shutter saves a picture.
   let photoMode = false;
@@ -248,6 +276,7 @@ async function start() {
     photoMode = on;
     document.body.classList.toggle('photo', on);
     follow.photo = on;
+    post.photo = on;
     if (on) {
       photoGait = horse.gaitIndex;
       horse.setAutopilot(false);
@@ -311,6 +340,8 @@ async function start() {
   keys.onPress(['KeyT'], click('btn-auto'));
   keys.onPress(['KeyV'], click('btn-view'));
   keys.onPress(['KeyQ'], click('btn-quality'));
+  keys.onPress(['KeyE'], click('btn-effects'));
+  keys.onPress(['KeyG'], click('btn-time'));
   keys.onPress(['KeyP'], click('btn-weather'));
   keys.onPress(['KeyR'], () => horse.returnToTrail());
 
@@ -327,7 +358,7 @@ async function start() {
   };
 
   // Debug handle for development and automated checks; not used by the game itself.
-  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest, water, clouds, godRays, rain, particles, effects, weather, plan, landmarks, sheep, crows, audio, objectives, beacon } });
+  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest, water, clouds, godRays, rain, particles, effects, weather, plan, landmarks, sheep, crows, post, timeOfDay, autoQuality, audio, objectives, beacon } });
 
   let waterIn = 0;
   let wasExhausted = false;
@@ -386,7 +417,9 @@ async function start() {
     follow.update(dt, horseModel.root.position, horse.renderHeading, horse.speed / TOP_SPEED);
 
     windTime.value += dt;
+    timeOfDay.update(dt);
     weather.update(dt);
+    autoQuality.update(dt);
     terrain.update(camera);
     grass.update(camera);
     forest.update(camera);
@@ -452,7 +485,8 @@ async function start() {
       save();
     }
 
-    renderer.render(scene, camera);
+    if (photoMode) post.focus.value = camera.position.distanceTo(horseModel.root.position) + 1; // the rider's eye line
+    post.render(QUALITY_LEVELS[qualityIndex].post);
     if (capture) {
       // Taken straight after the draw, while the picture is still on the canvas.
       capture = false;

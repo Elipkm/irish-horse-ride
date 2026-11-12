@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { groundWet, overcast, rainAmount, skyDim } from './atmosphere';
+import { groundWet, overcast, rainAmount, skyDim, tod } from './atmosphere';
 import type { Environment } from './environment';
 import { windStrength } from './wind';
 
@@ -65,13 +65,13 @@ export class Weather {
     const falling = Math.max(0, b * 2.2 - 1.2); // …the rain follows
     overcast.value = closing;
     rainAmount.value = falling;
-    skyDim.value = lerp(1, 0.6, closing);
+    skyDim.value = lerp(1, 0.6, closing) * tod.dim;
     windStrength.value = lerp(1, 1.7, b);
     // Soaks in about 15 s of rain, dries over a couple of minutes.
     groundWet.value = approach(groundWet.value, falling > 0.3 ? 1 : 0, falling > 0.3 ? 1 / 15 : 1 / 120, dt);
 
     const { sun, fog } = this.environment;
-    sun.intensity = this.sunIntensity * lerp(1, 0.12, closing);
+    sun.intensity = this.sunIntensity * lerp(1, 0.12, closing) * tod.sunMul;
     fog.baseDensity.value = this.baseFog * lerp(1, 3.2, b);
     fog.mistDensity.value = this.mistFog * lerp(1, 1.5, b);
     this.scene.backgroundIntensity = skyDim.value;

@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { abs, cameraPosition, dot, exp, float, fog, length, mix, positionWorld, pow, saturate, select, uniform } from 'three/tsl';
-import { CLOUD_HEIGHT, cloudShadowShift, overcast, skyDim } from './atmosphere';
+import { CLOUD_HEIGHT, cloudShadowShift, fogTint, overcast, skyDim } from './atmosphere';
 import { WATER_LEVEL } from './heightfield';
 
 export interface Environment {
@@ -121,7 +121,7 @@ export async function loadEnvironment(scene: THREE.Scene, url: string): Promise<
   const amount = float(1).sub(exp(opticalDepth.negate()));
   // Under a closed sky the glow towards the sun goes and everything dims with the sky.
   const towardsSun = pow(saturate(dot(dir, uniform(sunDirection))), 4).mul(overcast.mul(-0.85).add(1));
-  const color = mix(uniform(horizon), uniform(sunHorizon), towardsSun).mul(skyDim);
+  const color = mix(uniform(horizon), uniform(sunHorizon), towardsSun).mul(skyDim).mul(fogTint);
   scene.fogNode = fog(color, amount);
 
   // A cloud shades the ground some way off, on the side away from the sun.

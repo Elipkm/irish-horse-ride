@@ -17,6 +17,13 @@ export const overcast = uniform(0);
 /** Brightness of sky, fog and reflections relative to the clear default. */
 export const skyDim = uniform(1);
 
+/** Time of day (world/timeOfDay.ts): multipliers the weather applies on top of its own values. */
+export const tod = { dim: 1, sunMul: 1 };
+/** Colour the fog takes on at golden hour, dusk and dawn (white = unchanged). */
+export const fogTint = uniform(new THREE.Color(1, 1, 1));
+/** Colour grade applied to the whole picture by the post effects (white = unchanged). */
+export const gradeTint = uniform(new THREE.Color(1, 1, 1));
+
 /** Height of the cloud layer above the lake, in metres. */
 export const CLOUD_HEIGHT = 700;
 /** Horizontal offset from a spot on the ground to the cloud that shades it. Set once the sun's direction is known. */

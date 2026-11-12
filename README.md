@@ -25,7 +25,22 @@ Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic We
 - **M8 Audio + HUD + waypoints + photo mode + save** - done: sound made entirely in code (hoofbeats that
   change with the ground, wind, rain, stream and lake, birdsong, breathing, a slow whistle tune), six places
   to find with a pointer and a column of light, a stamina bar, photo mode, and a save.
-- Next: **M9 Polish**.
+- **M9 Polish** - done: post effects toggle (bloom, colour grade, vignette; depth of field in photo mode),
+  time of day (Day, Golden hour, Dusk, Dawn), automatic quality that steps down or up to hold the frame rate,
+  a new app icon and iPad launch image.
+- All nine milestones are done. Next: test on the iPad and tune from what you see.
+
+## M9 features
+- **Time** (top right, or **G**): Day (the default misty sun), Golden hour, Dusk, Dawn. The sky is one photo,
+  so the sun does not move; the light's brightness and colour, the mist colour and (with Effects on) a colour
+  grade over the picture change over a few seconds. Remembered.
+- **Effects** (or **E**): soft bloom, the time-of-day colour grade and a light vignette. In photo mode the
+  background also blurs, focused on the horse. They are switched off automatically at Low quality.
+- **Quality** (or **Q**): cycles **Auto**, Low, Medium, High. Auto (the default) measures the frame rate every
+  few seconds, drops a level below 40 fps and climbs back above 56 fps; if climbing makes it slow again it
+  stays one level lower for the session. A message appears when it lowers.
+- Icons and launch image are drawn by `npm run icons` (tools/icons.mjs). After changing the icon, delete the
+  old home-screen app and add it again; iOS caches icons and launch images.
 
 ## M8 features
 - **Sound** (top right, or **M**): On, No music, Off. iOS only starts sound after your first touch, and
@@ -78,7 +93,7 @@ Keyboard (desktop):
 | **R** | Put the horse back on the trail (if it gets stuck) |
 | **V** | Camera near / far |
 | **P** | Weather: misty sun / rain |
-| **Q** | Quality Low / Medium / High (render resolution, terrain detail, grass density, distance at which trees become full models, how carefully the water mirrors the hills, rain density; light shafts are off on Low; remembered) |
+| **Q** | Quality Auto / Low / Medium / High (render resolution, terrain detail, grass density, distance at which trees become full models, how carefully the water mirrors the hills, rain density; light shafts are off on Low; remembered) |
 | Mouse drag | Look around |
 
 The horse slows on steep climbs and refuses slopes steeper than about 40°, slows in shallow water,

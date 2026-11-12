@@ -99,3 +99,8 @@ are rendered from those models when the game starts (`src/world/forest.ts`). The
 No asset files. Every sound (hoofbeats, wind, rain, stream, birds, breathing, the drone and whistle tune)
 is synthesised at run time with the Web Audio API in `src/audio/gameAudio.ts`. The column of light over
 the current place is a plain code-built mesh.
+
+## Icons and launch image (M9)
+
+`public/icon-180.png`, `icon-512.png`, `splash-landscape.png`, `splash-portrait.png` are drawn from code by
+`tools/icons.mjs` (an SVG of hills, a pale sun and a horseshoe, rendered with sharp). No outside artwork.
