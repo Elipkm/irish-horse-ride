@@ -35,6 +35,7 @@ export class GltfHorse {
   /** Add `shadow.mesh` to the scene separately. */
   readonly shadow = new BlobShadow();
 
+  private nose: THREE.Object3D | null = null;
   private readonly mixer: THREE.AnimationMixer;
   private readonly gaits: THREE.AnimationAction[];
   private readonly fidgets: THREE.AnimationAction[];
@@ -59,6 +60,13 @@ export class GltfHorse {
       if (material.name === 'coat') material.color.setRGB(0.62, 0.52, 0.46);
     });
 
+    // The bone nearest the nostrils, for the breath: a nose or jaw bone if there is one, else the head.
+    for (const pattern of [/nose|nostril|muzzle/i, /jaw/i, /head|skull/i]) {
+      gltf.scene.traverse((o) => {
+        if (!this.nose && (o as THREE.Bone).isBone && pattern.test(o.name)) this.nose = o;
+      });
+    }
+
     this.mixer = new THREE.AnimationMixer(gltf.scene);
     const clip = (name: string) => {
       const c = gltf.animations.find((a) => a.name === name);
@@ -79,6 +87,12 @@ export class GltfHorse {
       action.setLoop(THREE.LoopOnce, 1);
       return action;
     });
+  }
+
+  /** World position of the nostrils (valid after `update`). */
+  nosePosition(out: THREE.Vector3) {
+    if (this.nose) return this.nose.getWorldPosition(out);
+    return this.root.localToWorld(out.set(0, 1.55, 1.2));
   }
 
   /** Call once per rendered frame, after the controller has posed `root`. */

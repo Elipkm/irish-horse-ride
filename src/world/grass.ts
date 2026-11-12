@@ -21,6 +21,7 @@ import {
   vec2,
   vec3,
 } from 'three/tsl';
+import { cloudShade } from './atmosphere';
 import { WATER_LEVEL, type Heightfield } from './heightfield';
 import { mulberry32 } from './noise';
 import { grassShade, mapUv } from './terrainMaterial';
@@ -112,7 +113,7 @@ export class Grass {
     // Starts from the ground's own grass colour so blades and ground texture read as one surface.
     const base = vec3(uniform(grassMean)).mul(grassShade(control.a));
     const tint = mix(vec3(1, 1, 1), vec3(0.82, 0.78, 0.55), heath).mul(fract(tuft.z.mul(13.7)).mul(0.3).add(0.85));
-    const colour = mix(base.mul(0.55), base.mul(vec3(1.5, 1.55, 1.05)), y).mul(tint).mul(mix(1, 0.6, treeShade));
+    const colour = mix(base.mul(0.55), base.mul(vec3(1.5, 1.55, 1.05)), y).mul(tint).mul(mix(1, 0.6, treeShade)).mul(cloudShade(root));
 
     const material = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide });
     material.positionNode = position;

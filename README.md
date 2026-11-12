@@ -14,19 +14,28 @@ Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic We
 - **M5 Forest & grass** – done: about 13,000 oak, birch and Scots pine plus gorse bushes, full models near
   the camera and flat stand-in pictures (impostors) further away, grass that follows the camera, wind in
   grass and trees, shade on the ground under the trees, tree trunks the horse has to go round.
-- Next: **M6 Water, sky, weather, god rays, particles**.
+- **M6 Water, sky, weather, god rays, particles** – done: a lake and a river that flows down to it
+  (ripples, mirrored sky, hills and woods, clear shallows, shore foam, white water on steep stretches),
+  drifting clouds whose shadows cross the valley, a Misty sun / Rain weather switch, light shafts between
+  the trees, and things in the air: hoof dust, clods, spray, the horse's breath, falling leaves, midges.
+- Next: **M7 Irish landmarks**.
 
-## What you can do right now (M5)
+## What you can do right now (M6)
 Ride the horse around the valley. It starts standing on the trail. Woods cover the lower valley sides
 and the trail passes through a few of them; the horse slows to a walk and slides round a trunk if you
-ride into one. Bushes and grass can be ridden through.
+ride into one. Bushes and grass can be ridden through. The river can be waded anywhere (the trail
+crosses it at a ford); the lake only near its shore.
+
+**Weather** (top right, or **P**) switches between misty sun and light rain. The change takes about ten
+seconds: the cloud closes over, the light goes flat, the mist thickens, then the rain starts and the
+ground gets wet. The choice is remembered.
 
 On the iPad (two thumbs):
 
 - **Left thumb**: touch anywhere on the left side and a joystick appears under your thumb. Push left or right to steer.
 - **Right thumb**: **Stop / Walk / Trot / Canter / Gallop** set the pace (the current one is highlighted); **Jump** works from a trot or faster.
 - **Drag** anywhere else to look around. The camera drifts back behind the horse about a second after you let go.
-- Top right: **Auto-ride** (the horse follows the trail by itself; steering switches it off), **View** (near / far), **Quality**.
+- Top right: **Auto-ride** (the horse follows the trail by itself; steering switches it off), **View** (near / far), **Weather**, **Quality**.
 
 Keyboard (desktop):
 
@@ -40,7 +49,8 @@ Keyboard (desktop):
 | **T** | Auto-ride along the trail on/off |
 | **R** | Put the horse back on the trail (if it gets stuck) |
 | **V** | Camera near / far |
-| **Q** | Quality Low / Medium / High (render resolution, terrain detail, grass density, distance at which trees become full models; remembered) |
+| **P** | Weather: misty sun / rain |
+| **Q** | Quality Low / Medium / High (render resolution, terrain detail, grass density, distance at which trees become full models, how carefully the water mirrors the hills, rain density; light shafts are off on Low; remembered) |
 | Mouse drag | Look around |
 
 The horse slows on steep climbs and refuses slopes steeper than about 40°, slows in shallow water,

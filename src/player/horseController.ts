@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { HALF, WATER_LEVEL, type Heightfield } from '../world/heightfield';
+import { HALF, type Heightfield } from '../world/heightfield';
 import { GAITS, TOP_SPEED } from './gaits';
 
 const HALF_BODY = 0.55; // distance from the middle of the horse to its fore and hind hooves
@@ -52,6 +52,8 @@ export class HorseController {
   grounded = true;
   verticalSpeed = 0;
   heightAboveGround = 0;
+  /** Depth of the water the horse is standing in, in metres (0 or less on dry ground). */
+  waterDepth = 0;
   /** Heading as shown this frame (after applyPose). 0 faces +z; increases turning left. */
   renderHeading = 0;
 
@@ -93,7 +95,7 @@ export class HorseController {
   step(dt: number) {
     Object.assign(this.prev, this.cur);
     const c = this.cur;
-    const { heightAt } = this.field;
+    const { heightAt, waterLevelAt } = this.field;
 
     // Steering: eased so key taps do not jerk; turning circle widens with speed.
     const steerTarget = this.autopilot ? this.autoSteer() : this.steerInput;
@@ -111,7 +113,7 @@ export class HorseController {
       let want = this.gait.speed;
       want *= 1 - smoothstep(0.35, 0.8, grade); // too steep to climb at about 39°
       want = Math.min(want, lerp(want, GAITS[1].speed, smoothstep(0.35, 0.7, -grade))); // pick the way down carefully
-      const depth = WATER_LEVEL - (hFore + hHind) / 2;
+      const depth = waterLevelAt(c.x, c.z) - (hFore + hHind) / 2;
       if (depth > 0.15) want = Math.min(want, lerp(GAITS[3].speed, GAITS[1].speed, smoothstep(0.15, 0.8, depth)));
 
       // Refuse to walk into deep water or off the map. Looks ahead by the braking distance,
@@ -121,7 +123,7 @@ export class HorseController {
       const ax = c.x + fx * reach;
       const az = c.z + fz * reach;
       const limit = HALF - EDGE_MARGIN;
-      const aheadDepth = WATER_LEVEL - heightAt(ax, az);
+      const aheadDepth = waterLevelAt(ax, az) - heightAt(ax, az);
       const blocked = Math.abs(ax) > limit || Math.abs(az) > limit || (aheadDepth > MAX_WADE_DEPTH && aheadDepth > depth);
       if (blocked) want = 0;
 
@@ -155,6 +157,7 @@ export class HorseController {
       }
     }
     this.heightAboveGround = c.y - ground;
+    this.waterDepth = waterLevelAt(c.x, c.z) - c.y;
 
     // Body follows the slope under its hooves; in the air it tips with the arc of the jump.
     const lx = fz;

@@ -9,16 +9,23 @@ import { GltfHorse } from './player/gltfHorse';
 import { HorseController } from './player/horseController';
 import { ProceduralHorse } from './player/proceduralHorse';
 import { hud } from './ui/hud';
-import { Forest } from './world/forest';
-import { Grass } from './world/grass';
-import { windTime } from './world/wind';
-import { createLakePlaceholder, createMountains } from './world/backdrop';
+import { createMountains } from './world/backdrop';
+import { Effects } from './world/effects';
 import { loadEnvironment } from './world/environment';
+import { Forest } from './world/forest';
+import { GodRays } from './world/godRays';
+import { Grass } from './world/grass';
 import { generateHeightfield } from './world/heightfield';
+import { Particles } from './world/particles';
+import { Rain } from './world/rain';
+import { CloudLayer } from './world/sky';
 import { Terrain } from './world/terrain';
+import { Water } from './world/water';
+import { Weather } from './world/weather';
+import { windTime } from './world/wind';
 import { GROUND_LAYERS, type GroundTextures } from './world/terrainMaterial';
 
-// M5: ride a horse through the valley, its woods and its windblown grass.
+// M6: the valley has water, drifting cloud, weather, light shafts in the woods and things in the air.
 
 const STEP = 1 / 60; // fixed time step of the riding simulation
 
@@ -114,7 +121,17 @@ async function start() {
 
   const terrain = new Terrain(field, ground);
   terrain.setLodRange(QUALITY_LEVELS[qualityIndex].terrainRange);
-  scene.add(terrain.mesh, createMountains(), createLakePlaceholder(field));
+  scene.add(terrain.mesh, createMountains());
+
+  const water = new Water(field, environment, QUALITY_LEVELS[qualityIndex]);
+  const clouds = new CloudLayer(environment);
+  const godRays = new GodRays(forest, environment);
+  godRays.mesh.visible = QUALITY_LEVELS[qualityIndex].lightShafts;
+  const rain = new Rain(environment, QUALITY_LEVELS[qualityIndex].rainDrops);
+  const particles = new Particles();
+  const effects = new Effects(particles, field, forest, environment);
+  const weather = new Weather(scene, environment);
+  scene.add(water.mesh, clouds.mesh, godRays.mesh, rain.mesh, particles.mesh);
 
   const grass = new Grass(field, ground.grass.mean, QUALITY_LEVELS[qualityIndex].grassTufts);
   scene.add(grass.mesh);
@@ -141,6 +158,7 @@ async function start() {
     if (horse.autopilot && horse.gaitIndex === 0) setGait(1); // set off at a walk rather than standing there
   });
   hud.button('btn-view', () => `View: ${follow.far ? 'Far' : 'Near'}`, () => (follow.far = !follow.far));
+  hud.button('btn-weather', () => `Weather: ${weather.name}`, () => weather.next());
   hud.button('btn-quality', () => `Quality: ${QUALITY_LEVELS[qualityIndex].name}`, () => {
     qualityIndex = (qualityIndex + 1) % QUALITY_LEVELS.length;
     saveQualityIndex(qualityIndex);
@@ -148,6 +166,9 @@ async function start() {
     terrain.setLodRange(QUALITY_LEVELS[qualityIndex].terrainRange);
     grass.setDensity(QUALITY_LEVELS[qualityIndex].grassTufts);
     forest.setNearRange(QUALITY_LEVELS[qualityIndex].treeRange);
+    water.setQuality(QUALITY_LEVELS[qualityIndex]);
+    godRays.mesh.visible = QUALITY_LEVELS[qualityIndex].lightShafts;
+    rain.setDrops(QUALITY_LEVELS[qualityIndex].rainDrops);
   });
 
   const keys = new Keyboard();
@@ -160,6 +181,7 @@ async function start() {
   keys.onPress(['KeyT'], click('btn-auto'));
   keys.onPress(['KeyV'], click('btn-view'));
   keys.onPress(['KeyQ'], click('btn-quality'));
+  keys.onPress(['KeyP'], click('btn-weather'));
   keys.onPress(['KeyR'], () => horse.returnToTrail());
 
   window.addEventListener('resize', () => {
@@ -175,7 +197,7 @@ async function start() {
   };
 
   // Debug handle for development and automated checks; not used by the game itself.
-  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest } });
+  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest, water, clouds, godRays, rain, particles, effects, weather } });
 
   let last = performance.now();
   let simTime = 0;
@@ -183,6 +205,7 @@ async function start() {
   let acc = 0;
   let slowest = 0;
   let firstFrame = true;
+  const nose = new THREE.Vector3();
   renderer.setAnimationLoop((now: number) => {
     // The first callback's timestamp can predate `last`, and a hidden tab produces huge gaps: clamp both ways.
     const frameMs = Math.max(0, now - last);
@@ -208,9 +231,15 @@ async function start() {
     follow.update(dt, horseModel.root.position, horse.renderHeading, horse.speed / TOP_SPEED);
 
     windTime.value += dt;
+    weather.update(dt);
     terrain.update(camera);
     grass.update(camera);
     forest.update(camera);
+    clouds.update(camera);
+    rain.update();
+    particles.update(dt, camera);
+    effects.update(dt, horse, horseModel.root, horseModel.nosePosition(nose), camera);
+    particles.commit();
     renderer.render(scene, camera);
 
     if (firstFrame) {

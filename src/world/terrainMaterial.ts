@@ -24,6 +24,7 @@ import {
   vec2,
   vec3,
 } from 'three/tsl';
+import { cloudShade, groundWet } from './atmosphere';
 import { CELL, HALF, LEAF_CELLS, WORLD_SIZE, type Heightfield } from './heightfield';
 
 export const GROUND_LAYERS = ['grass', 'moss', 'mud', 'gravel', 'rock'] as const;
@@ -123,7 +124,8 @@ export function createTerrainMaterial(field: Heightfield, ground: GroundTextures
   const wMud = max(smoothstep(0.4, 0.75, control.g.add(breakup.mul(0.18))), wVerge);
   const wRock = float(1).sub(smoothstep(0.76, 0.87, baseNormal.y.add(breakup.mul(0.035))));
 
-  const wet = control.g.mul(float(1).sub(wRock));
+  // Wet where the map says so (river, shore, bog) and, in rain, everywhere.
+  const wet = max(control.g, groundWet.mul(0.8)).mul(float(1).sub(wRock.mul(float(1).sub(groundWet.mul(0.5)))));
   type Rgb = ReturnType<typeof vec3>;
   const layered = (g: Rgb, mo: Rgb, mu: Rgb, gr: Rgb, ro: Rgb) =>
     mix(mix(mix(mix(g, mo.mul(mossTint), wMoss), mu.mul(mudTint), wMud), gr, wPath), ro, wRock);
@@ -132,7 +134,10 @@ export function createTerrainMaterial(field: Heightfield, ground: GroundTextures
   // Far away each texture repeats every few pixels and reads as a regular grain. Fade to the same
   // blend built from each layer's average colour instead.
   const farAlbedo = layered(mean('grass').mul(grassTone), mean('moss'), mean('mud'), mean('gravel'), mean('rock'));
-  const albedo = mix(nearAlbedo, farAlbedo, smoothstep(90, 380, viewDist).mul(0.9)).mul(mix(1, 0.82, wet)).mul(mix(1, 0.6, treeShade));
+  const albedo = mix(nearAlbedo, farAlbedo, smoothstep(90, 380, viewDist).mul(0.9))
+    .mul(mix(1, 0.82, wet))
+    .mul(mix(1, 0.6, treeShade))
+    .mul(cloudShade(wp.xz)); // sunny patches and cloud shadows drifting over the valley
 
   const rockRough = mix(rockZ.nr.b, rockX.nr.b, facingX);
   const roughness = mix(

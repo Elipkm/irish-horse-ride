@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { HALF, WATER_LEVEL, type Heightfield } from './heightfield';
+import { HALF } from './heightfield';
 import { createNoise2D, fbm } from './noise';
 
 /**
@@ -50,20 +50,6 @@ export function createMountains(): THREE.Mesh {
   geometry.computeVertexNormals();
   const material = new THREE.MeshStandardNodeMaterial({ color: 0x4a5a3c, roughness: 1, metalness: 0 });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.matrixAutoUpdate = false;
-  return mesh;
-}
-
-/**
- * Placeholder lake surface: a flat, dark, glossy sheet that mirrors the sky through image-based
- * lighting. The real water shader (reflections, flow, shoreline foam) is milestone 6.
- */
-export function createLakePlaceholder(field: Heightfield): THREE.Mesh {
-  const geometry = new THREE.PlaneGeometry(520, 680).rotateX(-Math.PI / 2);
-  const material = new THREE.MeshStandardNodeMaterial({ color: 0x10181a, roughness: 0.06, metalness: 0 });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.set(field.lakeCentre.x, WATER_LEVEL, field.lakeCentre.z);
-  mesh.updateMatrix();
   mesh.matrixAutoUpdate = false;
   return mesh;
 }

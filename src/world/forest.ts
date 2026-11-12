@@ -25,6 +25,7 @@ import {
   vec2,
   vec3,
 } from 'three/tsl';
+import { cloudShade } from './atmosphere';
 import { createFoliageTexture } from './foliageTextures';
 import { FOREST_CELL, FOREST_CELLS, SPECIES, plantForest, type Planting } from './forestPlacement';
 import { CELL, GRID, HALF, type Heightfield } from './heightfield';
@@ -76,6 +77,8 @@ const toneOf = (t: FloatNode) => mix(vec3(0.84, 0.9, 0.82), vec3(1.14, 1.08, 0.9
 export class Forest {
   readonly group = new THREE.Group();
   readonly planting: Planting;
+  /** Per species (index as in the planting): unscaled height and crown radius in metres; `tree` is false for bushes. */
+  readonly speciesSize: { height: number; radius: number; tree: boolean }[];
   /** Triangles of full-detail trees drawn in the last update. */
   nearTriangles = 0;
   nearTrees = 0;
@@ -89,6 +92,7 @@ export class Forest {
   constructor(renderer: THREE.WebGPURenderer, field: Heightfield, bark: BarkTextures, sunDirection: THREE.Vector3) {
     this.planting = plantForest(field);
     const models = SPECIES.map((kind) => buildTree(kind));
+    this.speciesSize = models.map((m) => ({ height: m.height, radius: m.radius, tree: m.trunkRadius > 0 }));
     const leafTextures = models.map((m) => createFoliageTexture(m.kind));
 
     // ---------------------------------------------------------------- colours shared by models and pictures
@@ -129,7 +133,7 @@ export class Forest {
         cos(windTime.mul(2.4).add(phase.mul(1.3)))
       ).mul(windStrength.mul(0.045));
       const normalView = cameraViewMatrix.transformDirection(varying(turn(attribute('normal', 'vec3'))));
-      const tone = varying(toneOf(B.y));
+      const tone = varying(toneOf(B.y).mul(cloudShade(A.xz)));
 
       const instanced = (source: THREE.BufferGeometry) => {
         const g = new THREE.InstancedBufferGeometry();
@@ -265,7 +269,7 @@ export class Forest {
 
       const material = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, alphaTest: 0.4 });
       material.positionNode = position;
-      material.colorNode = colour.rgb.mul(varying(toneOf(B.w)));
+      material.colorNode = colour.rgb.mul(varying(toneOf(B.w).mul(cloudShade(A.xz))));
       material.opacityNode = colour.a;
       material.normalNode = cameraViewMatrix.transformDirection(normalWorld).mul(faceDirection);
       material.roughness = 1;

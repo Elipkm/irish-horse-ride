@@ -103,6 +103,11 @@ export class ProceduralHorse {
   }
 
   /** Call once per rendered frame, after the controller has posed `root`. */
+  /** World position of the nostrils. */
+  nosePosition(out: THREE.Vector3) {
+    return this.root.localToWorld(out.set(0, 1.55, 1.2));
+  }
+
   update(dt: number, m: HorseMotion) {
     this.time += dt;
     const fast = saturate(m.speed / TOP_SPEED);

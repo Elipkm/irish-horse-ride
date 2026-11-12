@@ -35,6 +35,11 @@ Poly Haven, 1K JPG downloads of the `diff` and `arm` maps, reduced to 512 px col
 |------|--------|--------|---------|-------|
 | `public/env/sky.hdr` | https://polyhaven.com/a/kloofendal_28d_misty_puresky | Greg Zaal, Jenelle van Heerden | CC0 | 1K HDR, unmodified copy. Sky background, image-based lighting, and the source the sun direction and fog colours are measured from. |
 
+## Water, clouds, rain, light shafts, particles (M6)
+
+No asset files. The ripple, foam and cloud patterns are one small noise picture generated in code at
+start-up (`src/world/atmosphere.ts`); the water mirrors the sky image listed above.
+
 ## App icons
 
 | File | Source | Author | License | Notes |

@@ -1,12 +1,18 @@
 import * as THREE from 'three/webgpu';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { abs, cameraPosition, dot, exp, float, fog, length, mix, positionWorld, pow, saturate, select, uniform } from 'three/tsl';
+import { CLOUD_HEIGHT, cloudShadowShift, overcast, skyDim } from './atmosphere';
 import { WATER_LEVEL } from './heightfield';
 
 export interface Environment {
   /** Unit vector pointing from the ground towards the sun, measured from the sky image. */
   sunDirection: THREE.Vector3;
   sun: THREE.DirectionalLight;
+  /** The sky image (equirectangular, HDR): also what the water reflects. */
+  sky: THREE.Texture;
+  /** Sky colour just above the horizon, all around and below the sun. Linear, in the sky image's units. */
+  horizon: THREE.Vector3;
+  sunHorizon: THREE.Vector3;
   fog: {
     /** Fog per metre everywhere. */
     baseDensity: { value: number };
@@ -113,9 +119,14 @@ export async function loadEnvironment(scene: THREE.Scene, url: string): Promise<
   const mistAtCamera = mistDensity.mul(exp(cameraPosition.y.sub(WATER_LEVEL).mul(-falloff)));
   const opticalDepth = dist.mul(baseDensity.add(mistAtCamera.mul(column)));
   const amount = float(1).sub(exp(opticalDepth.negate()));
-  const towardsSun = pow(saturate(dot(dir, uniform(sunDirection))), 4);
-  const color = mix(uniform(horizon), uniform(sunHorizon), towardsSun);
+  // Under a closed sky the glow towards the sun goes and everything dims with the sky.
+  const towardsSun = pow(saturate(dot(dir, uniform(sunDirection))), 4).mul(overcast.mul(-0.85).add(1));
+  const color = mix(uniform(horizon), uniform(sunHorizon), towardsSun).mul(skyDim);
   scene.fogNode = fog(color, amount);
 
-  return { sunDirection, sun, fog: { baseDensity, mistDensity } };
+  // A cloud shades the ground some way off, on the side away from the sun.
+  const reach = CLOUD_HEIGHT / Math.max(0.15, sunDirection.y);
+  cloudShadowShift.value.set(sunDirection.x * reach, sunDirection.z * reach);
+
+  return { sunDirection, sun, sky, horizon, sunHorizon, fog: { baseDensity, mistDensity } };
 }

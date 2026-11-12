@@ -81,7 +81,8 @@ export class FollowCamera {
     const d = this.distance * this.pull;
     const cam = this.camera.position;
     cam.set(this.target.x - Math.sin(a) * Math.cos(p) * d, this.target.y + Math.sin(p) * d, this.target.z - Math.cos(a) * Math.cos(p) * d);
-    cam.y = Math.max(cam.y, this.field.heightAt(cam.x, cam.z) + 0.5); // last resort while the rise catches up
+    // Last resort while the rise catches up; also keeps the lens above the water.
+    cam.y = Math.max(cam.y, this.field.heightAt(cam.x, cam.z) + 0.5, this.field.waterLevelAt(cam.x, cam.z) + 0.4);
     this.camera.lookAt(this.target);
 
     const fov = 58 + 9 * this.rush;

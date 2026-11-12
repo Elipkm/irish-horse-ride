@@ -52,15 +52,33 @@ const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 /** x of the valley centre line at a given z: a gentle S-curve. */
 export const valleyAxis = (z: number) => 120 * Math.sin(z / 420) + 60 * Math.sin(z / 170 + 1.3);
 /** x of the river at a given z: meanders inside the valley floor. */
-const riverX = (z: number) => valleyAxis(z) + 38 * Math.sin(z / 95) + 14 * Math.sin(z / 41 + 2);
+export const riverX = (z: number) => valleyAxis(z) + 38 * Math.sin(z / 95) + 14 * Math.sin(z / 41 + 2);
 /** 1 where the river exists (north slopes down to the lake), fading to 0 at both ends. */
 const riverFade = (z: number) => smoothstep(-860, -780, z) * (1 - smoothstep(120, 190, z));
+/**
+ * The river's water runs from a spring at the foot of the valley head (RIVER_Z0) down to the lake;
+ * its long profile is stored every RIVER_STEP metres. (Above the spring the channel is a dry gully.)
+ */
+export const RIVER_Z0 = -610;
+export const RIVER_Z1 = 190;
+export const RIVER_STEP = 2;
+/** Water depth in the middle of the river channel, in metres. */
+const RIVER_DEPTH = 0.6;
+/** Beyond this distance from the river's centre line there is no river water. */
+export const RIVER_HALF_WIDTH = 13;
 
 export interface Heightfield {
   /** Heights in metres, row-major [z][x], GRID × GRID. Identical to what the GPU samples. */
   heights: Float32Array;
   /** Terrain height at any world position (bilinear, clamped to the map). */
   heightAt(x: number, z: number): number;
+  /**
+   * Height of the water surface at a world position: the river's surface near the river, the lake
+   * level everywhere else. There is water where this is above heightAt().
+   */
+  waterLevelAt(x: number, z: number): number;
+  /** River surface height every RIVER_STEP metres from RIVER_Z0 to RIVER_Z1 (never below the lake level). */
+  riverSurface: Float32Array;
   /** Per quadtree level (0 = 64 m leaves): min and max height of every node, for culling. */
   nodeMin: Float32Array[];
   nodeMax: Float32Array[];
@@ -162,6 +180,58 @@ export async function generateHeightfield(onProgress: (fraction: number) => void
     return (a + (b - a) * fx) * (1 - fz) + (c + (d - c) * fx) * fz;
   };
 
+  // --- River: water must never run uphill. Take the bed's height along the river, smooth it, force
+  // it to fall all the way to the lake, and cut the channel down to that line where the ground rises.
+  const riverN = (RIVER_Z1 - RIVER_Z0) / RIVER_STEP + 1;
+  const riverBed = new Float32Array(riverN);
+  const riverSurface = new Float32Array(riverN);
+  {
+    const raw = new Float32Array(riverN);
+    for (let k = 0; k < riverN; k++) {
+      const z = RIVER_Z0 + k * RIVER_STEP;
+      raw[k] = heightAt(riverX(z), z);
+    }
+    for (let k = 0; k < riverN; k++) {
+      let sum = 0;
+      let n = 0;
+      for (let o = -4; o <= 4; o++) {
+        if (k + o < 0 || k + o >= riverN) continue;
+        sum += raw[k + o];
+        n++;
+      }
+      // Low enough that the water stays between its banks, also where the ground flattens out near the lake.
+      const z = RIVER_Z0 + k * RIVER_STEP;
+      const x = riverX(z);
+      const banks = Math.min(heightAt(x - RIVER_HALF_WIDTH, z), heightAt(x + RIVER_HALF_WIDTH, z), heightAt(x - 8, z), heightAt(x + 8, z));
+      const smooth = Math.min(raw[k], sum / n, banks - 0.2 - RIVER_DEPTH);
+      riverBed[k] = k === 0 ? smooth : Math.min(smooth, riverBed[k - 1] - 0.003 * RIVER_STEP);
+      const surface = riverBed[k] + RIVER_DEPTH * smoothstep(RIVER_Z0, RIVER_Z0 + 50, RIVER_Z0 + k * RIVER_STEP);
+      riverSurface[k] = Math.max(WATER_LEVEL, k === 0 ? surface : Math.min(surface, riverSurface[k - 1]));
+    }
+    for (let j = 0; j < N; j++) {
+      const z = -HALF + j * CELL;
+      if (z < RIVER_Z0 || z > RIVER_Z1) continue;
+      const bed = riverBed[Math.round((z - RIVER_Z0) / RIVER_STEP)];
+      if (bed + RIVER_DEPTH < WATER_LEVEL) continue; // from here on it is the lake
+      const rf = riverFade(z);
+      const rx = riverX(z);
+      const i0 = Math.max(0, Math.floor((rx - 60 + HALF) / CELL));
+      const i1 = Math.min(N - 1, Math.ceil((rx + 60 + HALF) / CELL));
+      for (let i = i0; i <= i1; i++) {
+        const dr = Math.abs(-HALF + i * CELL - rx);
+        // Channel cross-section, then a gentle bank the horse can walk down where the cut is deep.
+        const target = bed + 1.7 * Math.max(rf, 0.6) * (1 - Math.exp(-(dr * dr) / 30)) + 0.2 * Math.max(0, dr - 9);
+        if (target < heights[j * N + i]) heights[j * N + i] = target;
+      }
+    }
+  }
+  const waterLevelAt = (x: number, z: number) => {
+    if (z <= RIVER_Z0 || z >= RIVER_Z1 || Math.abs(x - riverX(z)) > RIVER_HALF_WIDTH) return WATER_LEVEL;
+    const g = (z - RIVER_Z0) / RIVER_STEP;
+    const k = Math.min(riverN - 2, Math.floor(g));
+    return riverSurface[k] + (riverSurface[k + 1] - riverSurface[k]) * (g - k);
+  };
+
   // --- Trail: lay the loop on the ground, cut a slight bench into slopes, record a distance field.
   const flatCurve = new THREE.CatmullRomCurve3(
     TRAIL_OFFSETS.map(([off, z]) => new THREE.Vector3(valleyAxis(z) + off, 0, z)),
@@ -260,7 +330,7 @@ export async function generateHeightfield(onProgress: (fraction: number) => void
       const riverMud = rf * Math.exp(-(dr * dr) / 55);
       const shoreMud = Math.exp(-((e - 1.03) * (e - 1.03)) / 0.006);
       const bog = flat * (1 - upland) * smoothstep(0.3, 0.62, fbm(noiseB, x / 140 + 9, z / 140, 2));
-      const underwater = h < WATER_LEVEL ? 1 : 0;
+      const underwater = h < waterLevelAt(x, z) ? 1 : 0;
       const mud = Math.max(riverMud, shoreMud, bog * 0.5, underwater);
 
       const heath = Math.max(
@@ -350,6 +420,8 @@ export async function generateHeightfield(onProgress: (fraction: number) => void
   return {
     heights,
     heightAt,
+    waterLevelAt,
+    riverSurface,
     nodeMin,
     nodeMax,
     heightTexture,
