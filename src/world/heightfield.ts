@@ -22,6 +22,9 @@ const SITE_OFFSETS = {
   abbeyKnoll: [-205, -265],
   stoneCircleHill: [235, -150],
   riverFord: [42, -482],
+  cottageNorth: [-128, -585],
+  cottageWest: [-186, -48],
+  cottageLake: [203, 152],
 } as const;
 
 /** Trail loop around the valley, as [offset east of the valley centre line, z]. */
@@ -70,8 +73,13 @@ export const RIVER_HALF_WIDTH = 13;
 export interface Heightfield {
   /** Heights in metres, row-major [z][x], GRID × GRID. Identical to what the GPU samples. */
   heights: Float32Array;
-  /** Terrain height at any world position (bilinear, clamped to the map). */
+  /**
+   * Height of what can be stood on at any world position: the terrain (bilinear, clamped to the
+   * map) or anything built over it and registered with addSurface (the bridge deck).
+   */
   heightAt(x: number, z: number): number;
+  /** Registers something to stand on above the terrain: returns its height at (x, z), or -Infinity outside it. */
+  addSurface(surface: (x: number, z: number) => number): void;
   /**
    * Height of the water surface at a world position: the river's surface near the river, the lake
    * level everywhere else. There is water where this is above heightAt().
@@ -166,7 +174,15 @@ export async function generateHeightfield(onProgress: (fraction: number) => void
   }
 
   const idx = (i: number, j: number) => Math.min(N - 1, Math.max(0, j)) * N + Math.min(N - 1, Math.max(0, i));
+  const surfaces: ((x: number, z: number) => number)[] = [];
   const heightAt = (x: number, z: number) => {
+    const ground = terrainAt(x, z);
+    if (surfaces.length === 0) return ground;
+    let top = ground;
+    for (const surface of surfaces) top = Math.max(top, surface(x, z));
+    return top;
+  };
+  const terrainAt = (x: number, z: number) => {
     const gx = Math.min(N - 1, Math.max(0, (x + HALF) / CELL));
     const gz = Math.min(N - 1, Math.max(0, (z + HALF) / CELL));
     const i = Math.min(N - 2, Math.floor(gx));
@@ -420,6 +436,7 @@ export async function generateHeightfield(onProgress: (fraction: number) => void
   return {
     heights,
     heightAt,
+    addSurface: (surface) => surfaces.push(surface),
     waterLevelAt,
     riverSurface,
     nodeMin,

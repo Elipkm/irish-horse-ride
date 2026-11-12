@@ -17,6 +17,7 @@ const MUD = [0.075, 0.058, 0.04];
 const TURF = [0.07, 0.085, 0.035];
 const SPRAY = [0.62, 0.65, 0.68];
 const BREATH = [0.8, 0.82, 0.86];
+const SMOKE = [0.5, 0.52, 0.56];
 const LEAVES = [
   [0.3, 0.26, 0.06],
   [0.22, 0.25, 0.05],
@@ -41,6 +42,9 @@ export class Effects {
   private leaf = 0;
   private wasGrounded = true;
   private time = 0;
+  /** Chimney tops that smoke (set by the game once the cottages exist). */
+  chimneys: THREE.Vector3[] = [];
+  private smoke = 0;
   private readonly swarms: Swarm[] = [];
   private readonly light = new THREE.Vector3();
   private readonly glow = new THREE.Vector3();
@@ -85,6 +89,25 @@ export class Effects {
     this.breathe(dt, horse);
     this.leaves(dt, camera);
     this.midges(camera);
+    this.chimneySmoke(dt, camera);
+  }
+
+  // ------------------------------------------------------------------ turf smoke from the cottages
+  private chimneySmoke(dt: number, camera: THREE.Camera) {
+    this.smoke -= dt;
+    if (this.smoke > 0) return;
+    this.smoke = 0.22;
+    for (const c of this.chimneys) {
+      if (c.distanceToSquared(camera.position) > 260 * 260) continue;
+      const gust = 0.7 + 0.5 * Math.random();
+      this.spawn(PUFF, SMOKE, c.x, c.y, c.z, WIND.x * gust + rnd(-0.15, 0.15), rnd(0.7, 1.1), WIND.z * gust + rnd(-0.15, 0.15), {
+        life: rnd(5, 7),
+        size: 0.45,
+        endSize: rnd(2.6, 3.8),
+        alpha: 0.2,
+        drag: 0.12,
+      });
+    }
   }
 
   // ------------------------------------------------------------------ hooves

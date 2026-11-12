@@ -18,13 +18,22 @@ Three.js + TypeScript + Vite. WebGPU where the browser supports it, automatic We
   (ripples, mirrored sky, hills and woods, clear shallows, shore foam, white water on steep stretches),
   drifting clouds whose shadows cross the valley, a Misty sun / Rain weather switch, light shafts between
   the trees, and things in the air: hoof dust, clods, spray, the horse's breath, falling leaves, midges.
-- Next: **M7 Irish landmarks**.
+- **M7 Irish landmarks** – done: dry-stone field walls with gate pillars and gates where the trail passes,
+  a ruined abbey with a round tower, high cross and graves, a stone circle on the hill, a hump-backed
+  bridge where the trail crosses the river, three thatched cottages with smoking chimneys, flocks of
+  sheep that move off when you ride up, and crows round the tower.
+- Next: **M8 Audio + HUD + waypoints + photo mode + save**.
 
-## What you can do right now (M6)
+## What you can do right now (M7)
 Ride the horse around the valley. It starts standing on the trail. Woods cover the lower valley sides
 and the trail passes through a few of them; the horse slows to a walk and slides round a trunk if you
 ride into one. Bushes and grass can be ridden through. The river can be waded anywhere (the trail
-crosses it at a ford); the lake only near its shore.
+crosses it by the bridge); the lake only near its shore.
+
+The trail passes the abbey, runs through the stone circle and crosses the bridge. Field walls stop the
+horse like a tree trunk does, but they are low: **jump** them from a canter or gallop (press Jump two or
+three metres before the wall), or use the gateways where the trail goes through. Buildings and standing
+stones are solid; you can ride into the abbey through its doors or the fallen stretch of its far wall.
 
 **Weather** (top right, or **P**) switches between misty sun and light rain. The change takes about ten
 seconds: the cloud closes over, the light goes flat, the mist thickens, then the rain starts and the

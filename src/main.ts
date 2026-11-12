@@ -15,6 +15,10 @@ import { loadEnvironment } from './world/environment';
 import { Forest } from './world/forest';
 import { GodRays } from './world/godRays';
 import { Grass } from './world/grass';
+import { Crows } from './world/crows';
+import { planLandmarks, TOWER } from './world/landmarkPlan';
+import { Landmarks } from './world/landmarks';
+import { SheepFlocks } from './world/sheep';
 import { generateHeightfield } from './world/heightfield';
 import { Particles } from './world/particles';
 import { Rain } from './world/rain';
@@ -25,7 +29,8 @@ import { Weather } from './world/weather';
 import { windTime } from './world/wind';
 import { GROUND_LAYERS, type GroundTextures } from './world/terrainMaterial';
 
-// M6: the valley has water, drifting cloud, weather, light shafts in the woods and things in the air.
+// M7: the valley is lived in: field walls and gates, a ruined abbey and round tower, a stone circle,
+// a bridge, cottages with smoking chimneys, sheep and crows.
 
 const STEP = 1 / 60; // fixed time step of the riding simulation
 
@@ -114,8 +119,12 @@ async function start() {
     loadBark('bark_pine_col.webp'),
   ]);
 
-  // The forest goes first: it writes the shade under the trees into a terrain map.
-  const forest = new Forest(renderer, field, { oak: barkOak, pine: barkPine }, environment.sunDirection);
+  // Where the landmarks stand is settled first, so the trees keep clear of them. The plan also
+  // makes the bridge deck part of the ground the horse stands on.
+  const plan = planLandmarks(field);
+
+  // The forest goes next: it writes the shade under the trees into a terrain map.
+  const forest = new Forest(renderer, field, { oak: barkOak, pine: barkPine }, environment.sunDirection, plan);
   forest.setNearRange(QUALITY_LEVELS[qualityIndex].treeRange);
   scene.add(forest.group);
 
@@ -136,10 +145,23 @@ async function start() {
   const grass = new Grass(field, ground.grass.mean, QUALITY_LEVELS[qualityIndex].grassTufts);
   scene.add(grass.mesh);
 
+  const landmarks = new Landmarks(field, plan, ground.rock.col);
+  const sheep = new SheepFlocks(field, plan.colliders);
+  const crows = new Crows(new THREE.Vector3(plan.tower.x, plan.tower.y + TOWER.height, plan.tower.z));
+  scene.add(landmarks.mesh, sheep.mesh, crows.mesh);
+  effects.chimneys = landmarks.chimneys;
+
   const horse = new HorseController(field);
-  horse.obstacles = forest;
+  // Solid things: tree trunks, and everything built (low field walls can be jumped).
+  horse.obstacles = {
+    pushOut(p, radius, clearance) {
+      const tree = forest.pushOut(p, radius);
+      return plan.colliders.pushOut(p, radius, clearance) || tree;
+    },
+  };
   scene.add(horseModel.root, horseModel.shadow.mesh);
   const follow = new FollowCamera(camera, field);
+  follow.structures = plan.colliders;
 
   const setGait = (index: number) => {
     horse.setGait(index);
@@ -197,7 +219,7 @@ async function start() {
   };
 
   // Debug handle for development and automated checks; not used by the game itself.
-  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest, water, clouds, godRays, rain, particles, effects, weather } });
+  Object.assign(window, { __game: { renderer, scene, camera, terrain, field, environment, horse, horseModel, follow, touch, grass, forest, water, clouds, godRays, rain, particles, effects, weather, plan, landmarks, sheep, crows } });
 
   let last = performance.now();
   let simTime = 0;
@@ -237,6 +259,7 @@ async function start() {
     forest.update(camera);
     clouds.update(camera);
     rain.update();
+    sheep.update(dt, horseModel.root.position);
     particles.update(dt, camera);
     effects.update(dt, horse, horseModel.root, horseModel.nosePosition(nose), camera);
     particles.commit();

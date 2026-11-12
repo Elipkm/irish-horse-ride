@@ -10,13 +10,15 @@ const damp = (from: number, to: number, rate: number, dt: number) => to + (from 
  * it first rises, and only moves closer if rising is not enough. Looking around (`look`) is added
  * on top and drifts back behind the horse once the finger is lifted.
  * Trees do not block it: leaves close to the lens dissolve instead (world/forest.ts), and trunks are
- * thin enough to look past. Walls join the terrain check when they exist (M7).
+ * thin enough to look past. Buildings count as terrain for this check; low field walls do not.
  */
 export class FollowCamera {
   /** Far = high overview of the horse in the valley. */
   far = false;
   /** True while a finger is down looking around: stops the view drifting back. */
   held = false;
+  /** Tall built things (abbey walls, tower, cottages) the camera must see over rather than through. */
+  structures: { topAt(x: number, z: number): number } | null = null;
 
   private yaw = 0;
   private pitch = 0;
@@ -98,9 +100,12 @@ export class FollowCamera {
     const sx = -Math.sin(angle) * Math.cos(pitch) * distance;
     const sy = Math.sin(pitch) * distance;
     const sz = -Math.cos(angle) * Math.cos(pitch) * distance;
-    for (let i = 1; i <= 6; i++) {
-      const t = i / 6;
-      const ground = this.field.heightAt(this.target.x + sx * t, this.target.z + sz * t);
+    const STEPS = 9;
+    for (let i = 1; i <= STEPS; i++) {
+      const t = i / STEPS;
+      const x = this.target.x + sx * t;
+      const z = this.target.z + sz * t;
+      const ground = Math.max(this.field.heightAt(x, z), this.structures?.topAt(x, z) ?? -Infinity);
       if (this.target.y + sy * t < ground + 0.3 + 0.5 * t) return false; // more clearance nearer the camera
     }
     return true;

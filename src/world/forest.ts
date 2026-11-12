@@ -29,6 +29,7 @@ import { cloudShade } from './atmosphere';
 import { createFoliageTexture } from './foliageTextures';
 import { FOREST_CELL, FOREST_CELLS, SPECIES, plantForest, type Planting } from './forestPlacement';
 import { CELL, GRID, HALF, type Heightfield } from './heightfield';
+import type { LandmarkPlan } from './landmarkPlan';
 import { buildTree, type TreeModel } from './treeModels';
 import { windAt, windStrength, windTime } from './wind';
 
@@ -89,8 +90,8 @@ export class Forest {
   private readonly projScreen = new THREE.Matrix4();
   private readonly sphere = new THREE.Sphere();
 
-  constructor(renderer: THREE.WebGPURenderer, field: Heightfield, bark: BarkTextures, sunDirection: THREE.Vector3) {
-    this.planting = plantForest(field);
+  constructor(renderer: THREE.WebGPURenderer, field: Heightfield, bark: BarkTextures, sunDirection: THREE.Vector3, landmarks: LandmarkPlan) {
+    this.planting = plantForest(field, landmarks);
     const models = SPECIES.map((kind) => buildTree(kind));
     this.speciesSize = models.map((m) => ({ height: m.height, radius: m.radius, tree: m.trunkRadius > 0 }));
     const leafTextures = models.map((m) => createFoliageTexture(m.kind));

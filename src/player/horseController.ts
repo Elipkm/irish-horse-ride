@@ -10,10 +10,13 @@ const MAX_WADE_DEPTH = 1.0; // deeper water than this stops the horse
 const EDGE_MARGIN = 40; // keep this far inside the edge of the map
 const BODY_RADIUS = 0.45; // room the horse needs beside a tree trunk
 
-/** Solid things the horse must go round (tree trunks; walls later). */
+/** Solid things the horse must go round (tree trunks, walls, buildings). */
 export interface Obstacles {
-  /** Moves `p` out of any obstacle that a circle of `radius` around it overlaps; true if it moved. */
-  pushOut(p: { x: number; z: number }, radius: number): boolean;
+  /**
+   * Moves `p` out of any obstacle that a circle of `radius` around it overlaps; true if it moved.
+   * `clearance` is how high off the ground the horse is: low walls let a jumping horse pass.
+   */
+  pushOut(p: { x: number; z: number }, radius: number, clearance?: number): boolean;
 }
 
 const smoothstep = (a: number, b: number, x: number) => {
@@ -134,7 +137,7 @@ export class HorseController {
     c.x += fx * this.speed * dt;
     c.z += fz * this.speed * dt;
     // Brushing a trunk: slide round it, and no faster than a walk.
-    if (this.obstacles?.pushOut(c, BODY_RADIUS)) this.speed = Math.min(this.speed, GAITS[1].speed);
+    if (this.obstacles?.pushOut(c, BODY_RADIUS, this.heightAboveGround)) this.speed = Math.min(this.speed, GAITS[1].speed);
     hFore = heightAt(c.x + fx * HALF_BODY, c.z + fz * HALF_BODY);
     hHind = heightAt(c.x - fx * HALF_BODY, c.z - fz * HALF_BODY);
     const ground = (hFore + hHind) / 2;

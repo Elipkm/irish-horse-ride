@@ -1,4 +1,5 @@
 import { CELL, GRID, HALF, LEAF_SIZE, WATER_LEVEL, WORLD_SIZE, valleyAxis, type Heightfield } from './heightfield';
+import type { LandmarkPlan } from './landmarkPlan';
 import { createNoise2D, fbm, mulberry32 } from './noise';
 
 export const SPECIES = ['oak', 'birch', 'pine', 'gorse'] as const;
@@ -32,10 +33,10 @@ const smoothstep = (a: number, b: number, x: number) => {
 /**
  * Decides where every tree and bush stands. Woods clothe the lower valley sides and form a few
  * copses on the floor; birch gathers at wood edges and on damp ground, Scots pine takes over
- * higher up, gorse dots the open heath. The trail, the river, the lake shore, steep rock and the
- * landmark sites are kept clear. Same result on every run.
+ * higher up, gorse dots the open heath. The trail, the river, the lake shore, steep rock, the
+ * landmark sites and the field walls are kept clear. Same result on every run.
  */
-export function plantForest(field: Heightfield): Planting {
+export function plantForest(field: Heightfield, landmarks: LandmarkPlan): Planting {
   const noise = createNoise2D(9001);
   const rand = mulberry32(4242);
   const { heightAt, control, normalAo, sites } = field;
@@ -57,6 +58,7 @@ export function plantForest(field: Heightfield): Planting {
     [sites.abbeyKnoll.x, sites.abbeyKnoll.z, 55],
     [sites.stoneCircleHill.x, sites.stoneCircleHill.z, 60],
     [sites.riverFord.x, sites.riverFord.z, 30],
+    ...landmarks.clearings,
   ];
   /** 0 inside a landmark clearing, rising to 1 a little way outside it. */
   const open = (x: number, z: number) => {
@@ -94,6 +96,7 @@ export function plantForest(field: Heightfield): Planting {
       const pine = 0.06 + 0.85 * smoothstep(45, 115, rise);
       const birch = 0.22 + 0.4 * (1 - smoothstep(0.05, 0.4, woods)) + 0.3 * smoothstep(0.15, 0.4, g.mud);
       const s = pick < pine ? 2 : (pick - pine) / (1 - pine) < birch ? 1 : 0;
+      if (landmarks.colliders.near(x, z, 1.8)) continue; // not on top of a field wall
       found.push({ s, x, y: h, z, scale: 0.72 + 0.56 * size * size + (s === 0 ? 0.12 * size : 0) });
     }
   }
@@ -113,7 +116,7 @@ export function plantForest(field: Heightfield): Planting {
       if (g.path > 0.42 || g.mud > 0.4 || g.flatness < 0.74) continue;
       const clump = smoothstep(0.1, 0.5, fbm(noise, x / 45 + 300, z / 45, 2));
       const density = 0.3 * clump * smoothstep(0.4, 0.75, g.heath) * open(x, z);
-      if (roll > density) continue;
+      if (roll > density || landmarks.colliders.near(x, z, 1.2)) continue;
       found.push({ s: 3, x, y: h, z, scale: 0.7 + 0.8 * size });
     }
   }

@@ -40,6 +40,13 @@ Poly Haven, 1K JPG downloads of the `diff` and `arm` maps, reduced to 512 px col
 No asset files. The ripple, foam and cloud patterns are one small noise picture generated in code at
 start-up (`src/world/atmosphere.ts`); the water mirrors the sky image listed above.
 
+## Landmarks, sheep, crows (M7)
+
+No new asset files. Walls, abbey, tower, cross, bridge, cottages, standing stones, sheep and crows are
+shapes built in code (`src/world/landmarks.ts`, `sheep.ts`, `crows.ts`). The masonry picture and its bump
+map are painted in code at start-up (`src/world/stoneTextures.ts`); standing stones, the high cross and
+the gravestones reuse the `rock_col.webp` ground texture listed above.
+
 ## App icons
 
 | File | Source | Author | License | Notes |
